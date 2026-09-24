@@ -1,5 +1,7 @@
 crewai
-fastapi
-uvicorn
+gunicorn
+
 python-dotenv
 google-genai
+requests
+flask
