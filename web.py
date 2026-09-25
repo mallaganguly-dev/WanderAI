@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request,jsonify
 from google import genai
 from dotenv import load_dotenv
 
@@ -1579,6 +1579,61 @@ def index():
     return render_template(
         "index.html"
     )
+@app.route("/chat", methods=["POST"])
+def chat():
+
+    data = request.get_json()
+
+    message = data.get("message", "").strip()
+
+    if not message:
+        return jsonify({
+            "reply": "Please enter a message."
+        })
+
+    try:
+
+        response = client.models.generate_content(
+            model=MODEL,
+            contents=f"""
+You are WanderAI, an AI travel assistant.
+
+Help the user with:
+- Travel planning
+- Destinations
+- Places to visit
+- Food
+- Hotels
+- Transportation
+- Budget planning
+- Packing
+- Travel tips
+- Weather-related travel suggestions
+
+Give simple, useful and concise answers.
+
+User message:
+{message}
+"""
+        )
+
+        return jsonify({
+            "reply": response.text
+        })
+
+    except Exception as e:
+
+        return jsonify({
+            "reply": "Sorry, I couldn't process your request right now."
+        })
+
+@app.route("/chatbot")
+def chatbot():
+    return render_template("chatbot.html")
+@app.route("/booking")
+def booking():
+    return render_template("booking.html")
+
 @app.route("/login")
 def login():
     return render_template("login.html")
@@ -1645,6 +1700,8 @@ def view_trip(trip_id):
 
         destination=trip["destination"],
 
+        from_location=trip.get("from_location", ""),
+
         days=trip["days"],
 
         budget=trip["budget"],
@@ -1665,10 +1722,11 @@ def view_trip(trip_id):
 # PLAN TRIP
 # ==================================================
 
-@app.route(
-    "/plan",
-    methods=["POST"]
-)
+# ==================================================
+# PLAN TRIP
+# ==================================================
+
+@app.route("/plan", methods=["POST"])
 def plan():
 
     # ----------------------------------------------
@@ -1681,8 +1739,17 @@ def plan():
     ).strip()
 
     if not destination:
-
         destination = "Tokyo, Japan"
+
+
+    # ----------------------------------------------
+    # FROM LOCATION
+    # ----------------------------------------------
+
+    from_location = request.form.get(
+        "from_location",
+        ""
+    ).strip()
 
 
     # ----------------------------------------------
@@ -1695,19 +1762,15 @@ def plan():
     ).strip()
 
     try:
-
         days = int(days_value)
 
         if days < 1:
-
             days = 1
 
         if days > 30:
-
             days = 30
 
     except:
-
         days = 7
 
 
@@ -1727,7 +1790,6 @@ def plan():
         )
 
         if budget <= 0:
-
             budget = 3000.0
 
     except:
@@ -1745,7 +1807,6 @@ def plan():
     ).strip()
 
     if not interests:
-
         interests = "food, culture, history"
 
 
@@ -1759,7 +1820,6 @@ def plan():
     ).strip()
 
     if not travel_style:
-
         travel_style = "Balanced"
 
 
@@ -1834,23 +1894,17 @@ def plan():
 
     return render_template(
         "result.html",
-
         destination=destination,
-
+        from_location=from_location,
         days=days,
-
         budget=budget,
-
         interests=interests,
-
         travel_style=travel_style,
-
         itinerary=itinerary_with_maps,
-
         weather=weather,
-
         currency=currency
     )
+
 
 
 # ==================================================
@@ -1858,17 +1912,13 @@ def plan():
 # ==================================================
 
 if __name__ == "__main__":
-
     app.run(
-
         host="0.0.0.0",
-
         port=int(
             os.environ.get(
                 "PORT",
                 5000
             )
         ),
-
         debug=False
     )

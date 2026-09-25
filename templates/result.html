@@ -10,15 +10,22 @@
 
     <title>WanderAI — {{ destination }}</title>
 
+
+    <!-- Bootstrap -->
+
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
     >
 
+
+    <!-- Main CSS -->
+
     <link
         rel="stylesheet"
         href="{{ url_for('static', filename='css/style.css') }}"
     >
+
 
     <style>
 
@@ -48,12 +55,14 @@
             z-index: 1000;
         }
 
+
         .brand {
             text-decoration: none;
             color: #111827;
             font-size: 25px;
             font-weight: 800;
         }
+
 
         .nav-plan-btn {
             text-decoration: none;
@@ -63,6 +72,7 @@
             border-radius: 10px;
             font-weight: 700;
         }
+
 
         .nav-plan-btn:hover {
             color: white;
@@ -86,6 +96,7 @@
         ========================================== */
 
         .result-hero {
+
             background:
                 linear-gradient(
                     135deg,
@@ -99,7 +110,9 @@
             margin-bottom: 28px;
         }
 
+
         .result-hero .small-title {
+
             font-size: 14px;
             text-transform: uppercase;
             letter-spacing: 2px;
@@ -107,13 +120,17 @@
             margin-bottom: 10px;
         }
 
+
         .result-hero h1 {
+
             font-size: 44px;
             font-weight: 800;
             margin: 0 0 12px;
         }
 
+
         .result-hero p {
+
             margin: 0;
             font-size: 17px;
             opacity: 0.9;
@@ -125,25 +142,32 @@
         ========================================== */
 
         .summary-grid {
+
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             gap: 15px;
             margin-bottom: 30px;
         }
 
+
         .summary-card {
+
             background: white;
             border-radius: 18px;
             padding: 21px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.06);
         }
 
+
         .summary-icon {
+
             font-size: 25px;
             margin-bottom: 9px;
         }
 
+
         .summary-title {
+
             color: #6b7280;
             font-size: 12px;
             margin-bottom: 5px;
@@ -151,7 +175,9 @@
             letter-spacing: 0.5px;
         }
 
+
         .summary-value {
+
             font-size: 16px;
             font-weight: 700;
             word-break: break-word;
@@ -159,10 +185,11 @@
 
 
         /* ==========================================
-           WEATHER
+           CURRENCY
         ========================================== */
 
-        .weather-section {
+        .currency-section {
+
             background: white;
             border-radius: 22px;
             padding: 28px;
@@ -171,7 +198,9 @@
             box-shadow: 0 8px 25px rgba(0,0,0,0.06);
         }
 
-        .weather-header {
+
+        .currency-header {
+
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -179,7 +208,134 @@
             margin-bottom: 25px;
         }
 
+
+        .currency-label {
+
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            color: #16a34a;
+            margin-bottom: 5px;
+        }
+
+
+        .currency-header h2 {
+
+            margin: 0;
+            font-size: 25px;
+            font-weight: 800;
+            color: #111827;
+        }
+
+
+        .currency-main {
+
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+
+        .currency-icon {
+
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            background: #ecfdf5;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 32px;
+            font-weight: 800;
+        }
+
+
+        .currency-amount {
+
+            font-size: 32px;
+            font-weight: 900;
+            color: #111827;
+        }
+
+
+        .currency-code {
+
+            color: #6b7280;
+            font-size: 14px;
+            margin-top: 2px;
+        }
+
+
+        .currency-details {
+
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+
+        .currency-detail {
+
+            display: flex;
+            align-items: center;
+            gap: 12px;
+
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 15px;
+        }
+
+
+        .currency-detail > span {
+
+            font-size: 25px;
+        }
+
+
+        .currency-detail small {
+
+            display: block;
+            color: #6b7280;
+            margin-bottom: 3px;
+        }
+
+
+        .currency-detail strong {
+
+            color: #111827;
+            font-size: 14px;
+        }
+
+
+        /* ==========================================
+           WEATHER
+        ========================================== */
+
+        .weather-section {
+
+            background: white;
+            border-radius: 22px;
+            padding: 28px;
+            margin-bottom: 30px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+        }
+
+
+        .weather-header {
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+
         .weather-label {
+
             font-size: 12px;
             font-weight: 800;
             letter-spacing: 1.5px;
@@ -187,79 +343,106 @@
             margin-bottom: 5px;
         }
 
+
         .weather-header h2 {
+
             margin: 0;
             font-size: 25px;
             font-weight: 800;
             color: #111827;
         }
 
+
         .current-weather {
+
             display: flex;
             align-items: center;
             gap: 15px;
         }
 
+
         .weather-icon {
+
             font-size: 52px;
         }
 
+
         .temperature {
+
             font-size: 38px;
             font-weight: 900;
             color: #111827;
         }
 
+
         .weather-description {
+
             color: #6b7280;
             font-size: 14px;
         }
 
+
         .weather-details {
+
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
             margin-bottom: 28px;
         }
 
+
         .weather-detail {
+
             display: flex;
             align-items: center;
             gap: 12px;
+
             background: #f8fafc;
             border-radius: 15px;
             padding: 15px;
         }
 
+
         .weather-detail > span {
+
             font-size: 25px;
         }
 
+
         .weather-detail small {
+
             display: block;
             color: #6b7280;
             margin-bottom: 3px;
         }
 
+
         .weather-detail strong {
+
             color: #111827;
             font-size: 15px;
         }
 
+
         .forecast-title {
+
             font-size: 19px;
             font-weight: 800;
             color: #111827;
             margin-bottom: 15px;
         }
 
+
         .forecast-grid {
+
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 10px;
         }
 
+
         .forecast-card {
+
             background: #f8fafc;
             border: 1px solid #e5e7eb;
             border-radius: 15px;
@@ -268,39 +451,53 @@
             transition: transform 0.2s ease;
         }
 
+
         .forecast-card:hover {
+
             transform: translateY(-3px);
         }
 
+
         .forecast-date {
+
             font-size: 12px;
             font-weight: 700;
             color: #6b7280;
         }
 
+
         .forecast-icon {
+
             font-size: 30px;
             margin: 10px 0;
         }
 
+
         .forecast-description {
+
             font-size: 11px;
             color: #6b7280;
             min-height: 30px;
         }
 
+
         .forecast-temperature {
+
             margin-top: 10px;
             display: flex;
             justify-content: center;
             gap: 5px;
         }
 
+
         .forecast-temperature strong {
+
             color: #111827;
         }
 
+
         .forecast-temperature span {
+
             color: #9ca3af;
         }
 
@@ -310,6 +507,7 @@
         ========================================== */
 
         .top-actions {
+
             display: flex;
             justify-content: flex-end;
             gap: 10px;
@@ -317,7 +515,9 @@
             flex-wrap: wrap;
         }
 
+
         .action-btn {
+
             border: none;
             padding: 11px 17px;
             border-radius: 10px;
@@ -325,21 +525,29 @@
             cursor: pointer;
         }
 
+
         .copy-btn {
+
             background: #e8efff;
             color: #1d4ed8;
         }
 
+
         .copy-btn:hover {
+
             background: #dbe7ff;
         }
 
+
         .print-btn {
+
             background: #111827;
             color: white;
         }
 
+
         .print-btn:hover {
+
             background: #000000;
         }
 
@@ -349,30 +557,39 @@
         ========================================== */
 
         .itinerary-card {
+
             background: white;
             border-radius: 24px;
             padding: 32px;
             box-shadow: 0 7px 30px rgba(0,0,0,0.07);
         }
 
+
         .section-title {
+
             font-size: 27px;
             font-weight: 800;
             margin-bottom: 8px;
         }
 
+
         .section-subtitle {
+
             color: #6b7280;
             margin-bottom: 25px;
         }
 
+
         .itinerary {
+
             background: #f8fafc;
             border-radius: 18px;
             padding: 28px;
+
             font-family: Arial, sans-serif;
             font-size: 16px;
             line-height: 1.8;
+
             white-space: normal;
             overflow-x: auto;
         }
@@ -383,16 +600,21 @@
         ========================================== */
 
         .day-card {
+
             background: white;
             border-radius: 20px;
             margin-bottom: 25px;
             padding: 0;
+
             overflow: hidden;
+
             border: 1px solid #e5e7eb;
             box-shadow: 0 5px 18px rgba(0,0,0,0.05);
         }
 
+
         .day-title {
+
             background:
                 linear-gradient(
                     135deg,
@@ -401,8 +623,10 @@
                 );
 
             color: white;
+
             font-size: 23px;
             font-weight: 800;
+
             padding: 20px 24px;
         }
 
@@ -412,13 +636,17 @@
         ========================================== */
 
         .sub-heading {
+
             font-size: 17px;
             font-weight: 800;
             color: #111827;
+
             margin-top: 22px;
             margin-left: 24px;
             margin-right: 24px;
+
             padding-bottom: 7px;
+
             border-bottom: 1px solid #e5e7eb;
         }
 
@@ -428,9 +656,11 @@
         ========================================== */
 
         .normal-text {
+
             font-size: 15px;
             line-height: 1.75;
             color: #4b5563;
+
             margin: 10px 24px;
         }
 
@@ -440,9 +670,11 @@
         ========================================== */
 
         .bullet-item {
+
             font-size: 15px;
             line-height: 1.7;
             color: #4b5563;
+
             margin: 8px 24px;
         }
 
@@ -452,17 +684,24 @@
         ========================================== */
 
         .overview-section {
+
             background: #f8fafc;
             border-radius: 18px;
+
             padding: 22px;
             margin-bottom: 25px;
+
             border: 1px solid #e5e7eb;
         }
 
+
         .overview-title {
+
             font-size: 22px;
             font-weight: 800;
+
             margin-bottom: 15px;
+
             color: #111827;
         }
 
@@ -472,20 +711,31 @@
         ========================================== */
 
         .maps-link {
+
             display: inline-block;
+
             margin: 8px 24px 16px;
+
             padding: 9px 15px;
+
             border-radius: 10px;
+
             background: #e8f1ff;
             color: #1769e0;
+
             text-decoration: none;
+
             font-weight: 700;
+
             transition: 0.2s ease;
         }
 
+
         .maps-link:hover {
+
             color: #1258bf;
             background: #d8e8ff;
+
             transform: translateY(-1px);
         }
 
@@ -495,21 +745,31 @@
         ========================================== */
 
         .bottom-actions {
+
             text-align: center;
             margin-top: 30px;
         }
 
+
         .new-trip-btn {
+
             display: inline-block;
+
             text-decoration: none;
+
             padding: 14px 24px;
+
             border-radius: 12px;
+
             background: #2563eb;
             color: white;
+
             font-weight: 700;
         }
 
+
         .new-trip-btn:hover {
+
             background: #1d4ed8;
             color: white;
         }
@@ -520,6 +780,7 @@
         ========================================== */
 
         .footer {
+
             text-align: center;
             color: #6b7280;
             padding: 30px 20px;
@@ -533,11 +794,16 @@
         @media (max-width: 1050px) {
 
             .summary-grid {
-                grid-template-columns: repeat(3, 1fr);
+
+                grid-template-columns:
+                    repeat(3, 1fr);
             }
 
+
             .forecast-grid {
-                grid-template-columns: repeat(4, 1fr);
+
+                grid-template-columns:
+                    repeat(4, 1fr);
             }
 
         }
@@ -549,71 +815,137 @@
 
         @media (max-width: 700px) {
 
+
             .result-container {
-                padding: 25px 15px 50px;
+
+                padding:
+                    25px
+                    15px
+                    50px;
             }
+
 
             .result-hero {
-                padding: 35px 25px;
+
+                padding:
+                    35px
+                    25px;
             }
 
+
             .result-hero h1 {
+
                 font-size: 32px;
             }
 
+
             .summary-grid {
-                grid-template-columns: 1fr 1fr;
+
+                grid-template-columns:
+                    1fr 1fr;
             }
 
+
             .itinerary-card {
+
                 padding: 20px;
             }
 
+
             .itinerary {
+
                 padding: 15px;
             }
 
+
             .day-title {
+
                 font-size: 20px;
-                padding: 17px 18px;
+
+                padding:
+                    17px
+                    18px;
             }
+
 
             .sub-heading {
+
                 margin-left: 18px;
                 margin-right: 18px;
             }
+
 
             .normal-text {
+
                 margin-left: 18px;
                 margin-right: 18px;
             }
+
 
             .bullet-item {
+
                 margin-left: 18px;
                 margin-right: 18px;
             }
 
+
             .maps-link {
+
                 margin-left: 18px;
+            }
+
+
+            /* CURRENCY MOBILE */
+
+            .currency-header {
+
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+
+            .currency-details {
+
+                grid-template-columns: 1fr;
+            }
+
+
+            .currency-main {
+
+                width: 100%;
+            }
+
+
+            .currency-amount {
+
+                font-size: 27px;
             }
 
 
             /* WEATHER MOBILE */
 
             .weather-header {
+
                 flex-direction: column;
                 align-items: flex-start;
             }
 
+
             .weather-details {
+
                 grid-template-columns: 1fr;
             }
 
+
             .forecast-grid {
-                grid-template-columns: repeat(2, 1fr);
+
+                grid-template-columns:
+                    repeat(2, 1fr);
             }
 
+
             .current-weather {
+
                 width: 100%;
             }
 
@@ -626,32 +958,67 @@
 
         @media (max-width: 500px) {
 
+
             .summary-grid {
+
                 grid-template-columns: 1fr;
             }
 
+
             .result-hero h1 {
+
                 font-size: 28px;
             }
 
+
             .brand {
+
                 font-size: 21px;
             }
 
+
             .nav-plan-btn {
-                padding: 8px 12px;
+
+                padding:
+                    8px
+                    12px;
+
                 font-size: 13px;
             }
 
-            .weather-section {
+
+            .currency-section {
+
                 padding: 20px;
             }
 
-            .weather-header h2 {
+
+            .currency-header h2 {
+
                 font-size: 21px;
             }
 
+
+            .currency-amount {
+
+                font-size: 25px;
+            }
+
+
+            .weather-section {
+
+                padding: 20px;
+            }
+
+
+            .weather-header h2 {
+
+                font-size: 21px;
+            }
+
+
             .temperature {
+
                 font-size: 32px;
             }
 
@@ -664,52 +1031,84 @@
 
         @media print {
 
+
             .result-navbar,
             .top-actions,
             .bottom-actions,
             .footer {
+
                 display: none !important;
             }
 
+
             body {
+
                 background: white;
             }
+
 
             .result-container {
+
                 padding: 0;
             }
+
 
             .result-hero {
+
                 color: black;
                 background: white;
-                padding: 20px 0;
+
+                padding:
+                    20px
+                    0;
             }
 
+
             .itinerary-card {
+
                 box-shadow: none;
                 padding: 0;
             }
 
+
             .itinerary {
+
                 background: white;
                 padding: 0;
             }
 
+
             .day-card {
+
                 box-shadow: none;
-                break-inside: avoid;
+
+                break-inside:
+                    avoid;
+
                 margin-bottom: 20px;
             }
 
+
             .day-title {
-                background: #2563eb !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+
+                background:
+                    #2563eb !important;
+
+                -webkit-print-color-adjust:
+                    exact;
+
+                print-color-adjust:
+                    exact;
             }
 
-            .weather-section {
+
+            .weather-section,
+            .currency-section {
+
                 box-shadow: none;
-                break-inside: avoid;
+
+                break-inside:
+                    avoid;
             }
 
         }
@@ -720,7 +1119,31 @@
 
 
 <body>
+<nav class="navbar">
+    <div class="nav-container">
 
+        <a href="/" class="logo">
+            ✈️ WanderAI
+        </a>
+
+        <div class="nav-links">
+
+            <a href="/" class="nav-link">
+                Home
+            </a>
+
+            <a href="/#planner" class="nav-link">
+                Plan Trip
+            </a>
+
+            <a href="/history" class="nav-link">
+                Trip History
+            </a>
+
+        </div>
+
+    </div>
+</nav>
 
 <!-- ==========================================
      NAVBAR
@@ -739,6 +1162,7 @@
         >
             ✈️ WanderAI
         </a>
+
 
         <a
             href="/"
@@ -770,9 +1194,11 @@
             Your Personalized Travel Plan
         </div>
 
+
         <h1>
             {{ destination }}
         </h1>
+
 
         <p>
             Your AI-powered itinerary is ready.
@@ -836,6 +1262,7 @@
 
             <div class="summary-value">
                 ${{ "%.2f"|format(budget) }}
+                USD
             </div>
 
         </div>
@@ -880,42 +1307,57 @@
 
 
     <!-- ==========================================
-         WEATHER
+         CURRENCY
     ========================================== -->
 
-    {% if weather %}
+    {% if currency %}
 
-    <section class="weather-section">
+    <section class="currency-section">
 
-        <div class="weather-header">
+
+        <div class="currency-header">
+
 
             <div>
 
-                <div class="weather-label">
-                    🌤️ LIVE WEATHER
+                <div class="currency-label">
+                    💱 LOCAL CURRENCY
                 </div>
 
+
                 <h2>
-                    {{ weather.city }}, {{ weather.country }}
+                    Budget in
+                    {{ currency.currency_name }}
                 </h2>
 
             </div>
 
 
-            <div class="current-weather">
+            <div class="currency-main">
 
-                <div class="weather-icon">
-                    {{ weather.icon }}
+
+                <div class="currency-icon">
+                    {{ currency.symbol }}
                 </div>
+
 
                 <div>
 
-                    <div class="temperature">
-                        {{ weather.temperature }}°C
+                    <div class="currency-amount">
+
+                        {{ currency.symbol }}
+
+                        {{ "{:,.2f}".format(
+                            currency.converted_amount
+                        ) }}
+
                     </div>
 
-                    <div class="weather-description">
-                        {{ weather.description }}
+
+                    <div class="currency-code">
+
+                        {{ currency.target_currency }}
+
                     </div>
 
                 </div>
@@ -923,6 +1365,168 @@
             </div>
 
         </div>
+
+
+
+        <div class="currency-details">
+
+
+            <!-- ORIGINAL BUDGET -->
+
+            <div class="currency-detail">
+
+                <span>
+                    💵
+                </span>
+
+                <div>
+
+                    <small>
+                        Your Budget
+                    </small>
+
+                    <strong>
+
+                        ${{ "{:,.2f}".format(
+                            currency.original_amount
+                        ) }}
+
+                        USD
+
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- EXCHANGE RATE -->
+
+            <div class="currency-detail">
+
+                <span>
+                    🔄
+                </span>
+
+                <div>
+
+                    <small>
+                        Exchange Rate
+                    </small>
+
+                    <strong>
+
+                        1 USD =
+
+                        {{ currency.rate }}
+
+                        {{ currency.target_currency }}
+
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- TARGET CURRENCY -->
+
+            <div class="currency-detail">
+
+                <span>
+                    🌍
+                </span>
+
+                <div>
+
+                    <small>
+                        Destination Currency
+                    </small>
+
+                    <strong>
+
+                        {{ currency.target_currency }}
+
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+    </section>
+
+    {% endif %}
+
+
+
+    <!-- ==========================================
+         WEATHER
+    ========================================== -->
+
+    {% if weather %}
+
+    <section class="weather-section">
+
+
+        <div class="weather-header">
+
+
+            <div>
+
+                <div class="weather-label">
+                    🌤️ LIVE WEATHER
+                </div>
+
+
+                <h2>
+
+                    {{ weather.city }},
+
+                    {{ weather.country }}
+
+                </h2>
+
+            </div>
+
+
+            <div class="current-weather">
+
+
+                <div class="weather-icon">
+
+                    {{ weather.icon }}
+
+                </div>
+
+
+                <div>
+
+                    <div class="temperature">
+
+                        {{ weather.temperature }}°C
+
+                    </div>
+
+
+                    <div class="weather-description">
+
+                        {{ weather.description }}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
 
 
         <div class="weather-details">
@@ -941,12 +1545,15 @@
                     </small>
 
                     <strong>
+
                         {{ weather.feels_like }}°C
+
                     </strong>
 
                 </div>
 
             </div>
+
 
 
             <div class="weather-detail">
@@ -962,12 +1569,16 @@
                     </small>
 
                     <strong>
-                        {{ weather.wind_speed }} km/h
+
+                        {{ weather.wind_speed }}
+                        km/h
+
                     </strong>
 
                 </div>
 
             </div>
+
 
 
             <div class="weather-detail">
@@ -994,67 +1605,108 @@
         </div>
 
 
+
         <div class="forecast-title">
+
             7-Day Forecast
+
         </div>
+
 
 
         <div class="forecast-grid">
 
+
             {% for day in weather.forecast %}
+
 
             <div class="forecast-card">
 
+
                 <div class="forecast-date">
+
                     {{ day.date }}
+
                 </div>
+
 
                 <div class="forecast-icon">
+
                     {{ day.icon }}
+
                 </div>
 
+
                 <div class="forecast-description">
+
                     {{ day.description }}
+
                 </div>
+
 
                 <div class="forecast-temperature">
 
+
                     <strong>
+
                         {{ day.max }}°C
+
                     </strong>
 
+
                     <span>
+
                         {{ day.min }}°C
+
                     </span>
+
 
                 </div>
 
+
             </div>
+
 
             {% endfor %}
 
+
         </div>
 
+
     </section>
+
 
     {% else %}
 
+
     <section class="weather-section">
 
+
         <div class="weather-label">
+
             🌤️ WEATHER
+
         </div>
 
+
         <h2>
+
             Weather information unavailable
+
         </h2>
 
+
         <p class="weather-description">
-            We could not retrieve weather information
-            for this destination right now.
+
+            We could not retrieve weather
+            information for this destination
+            right now.
+
         </p>
 
+
     </section>
+
 
     {% endif %}
 
@@ -1066,11 +1718,14 @@
 
     <div class="top-actions">
 
+
         <button
             class="action-btn copy-btn"
             onclick="copyItinerary()"
         >
+
             📋 Copy Itinerary
+
         </button>
 
 
@@ -1078,8 +1733,11 @@
             class="action-btn print-btn"
             onclick="window.print()"
         >
+
             🖨️ Save / Print PDF
+
         </button>
+
 
     </div>
 
@@ -1088,17 +1746,42 @@
     <!-- ==========================================
          ITINERARY
     ========================================== -->
+<div class="booking-action-card">
+    <div>
+        <h2>✈️ Ready to Book Your Trip?</h2>
+        <p>
+            Find flights, trains, buses and hotels for your
+            <strong>{{ destination }}</strong> trip.
+        </p>
+    </div>
 
+    <a
+    href="{{ url_for('booking') }}?destination={{ destination|urlencode }}&from={{ from_location|urlencode }}&days={{ days }}&budget={{ budget }}"
+    class="booking-action-button">
+    ✈️ Book Your Trip
+</a>
+</div>
+    
     <section class="itinerary-card">
 
+
         <h2 class="section-title">
+
             🗺️ Your Complete Itinerary
+
         </h2>
 
+
         <p class="section-subtitle">
-            Follow your personalized day-by-day travel plan.
-            Use the Google Maps buttons to explore recommended places.
+
+            Follow your personalized
+            day-by-day travel plan.
+
+            Use the Google Maps buttons
+            to explore recommended places.
+
         </p>
+
 
 
         <div
@@ -1110,6 +1793,7 @@
 
         </div>
 
+
     </section>
 
 
@@ -1120,12 +1804,16 @@
 
     <div class="bottom-actions">
 
+
         <a
             href="/"
             class="new-trip-btn"
         >
+
             ✈️ Create Another Trip
+
         </a>
+
 
     </div>
 
@@ -1141,42 +1829,62 @@
 <footer class="footer">
 
     <p>
-        © 2026 WanderAI — AI-Powered Travel Planner
+
+        © 2026 WanderAI —
+        AI-Powered Travel Planner
+
     </p>
 
 </footer>
 
 
 
+<!-- ==========================================
+     JAVASCRIPT
+========================================== -->
+
 <script>
+
 
 function copyItinerary() {
 
+
     const itinerary =
+
         document
         .getElementById("itineraryText")
         .innerText;
 
+
     navigator.clipboard
+
         .writeText(itinerary)
 
+
         .then(function() {
+
 
             alert(
                 "Itinerary copied successfully!"
             );
 
+
         })
 
+
         .catch(function() {
+
 
             alert(
                 "Unable to copy itinerary."
             );
 
+
         });
 
+
 }
+
 
 </script>
 
