@@ -1375,3 +1375,40 @@ footer {
     transform:
         translateY(0);
 }
+/* Authentication buttons */
+.nav-auth {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav-auth a {
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.login-button {
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    padding: 10px 18px;
+    border-radius: 25px;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+.login-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.signup-button {
+    background: white;
+    color: #111 !important;
+    padding: 10px 18px;
+    border-radius: 25px;
+    font-weight: 700;
+    transition: 0.3s;
+}
+
+.signup-button:hover {
+    transform: translateY(-2px);
+}

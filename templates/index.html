@@ -16,27 +16,59 @@
 <body>
 
 <!-- ================= NAVBAR ================= -->
-
 <header class="navbar">
     <div class="nav-container">
 
-        <a href="#home" class="logo">
+        <a href="/" class="logo">
             <span class="logo-icon">✈</span>
             <span>Wander<span>AI</span></span>
         </a>
 
         <nav class="nav-links">
-            <a href="#home">Home</a>
-            <a href="#destinations">Destinations</a>
-            <a href="#experiences">Experiences</a>
-            <a href="#about">About</a>
+            <a href="/" class="nav-link">Home</a>
+            <a href="/#planner" class="nav-link">Plan Trip</a>
+            <a href="/history" class="nav-link">Trip History</a>
+            <a href="/#destinations" class="nav-link">Destinations</a>
+            <a href="/#experiences" class="nav-link">Experiences</a>
+            <a href="/#about" class="nav-link">About</a>
         </nav>
+<div class="nav-auth">
 
-        <a href="#planner" class="nav-button">
-            Plan My Trip
+    <a href="#planner" class="nav-button">
+        Plan My Trip
+    </a>
+
+    <div id="loggedOutButtons" class="auth-buttons">
+
+        <a href="/login" class="login-button">
+            Login
         </a>
 
-        <button class="menu-button" onclick="toggleMenu()">☰</button>
+        <a href="/signup" class="signup-button">
+            Sign Up
+        </a>
+
+    </div>
+
+    <div id="profileArea" class="profile-area" style="display: none;">
+
+        <img
+            id="profileImage"
+            class="profile-image"
+            src=""
+            alt="Profile"
+        >
+
+    </div>
+
+</div>
+       
+
+        <button class="menu-button"
+                onclick="toggleMenu()"
+                aria-label="Open menu">
+            ☰
+        </button>
 
     </div>
 </header>
@@ -162,41 +194,40 @@
 
                 <!-- TRAVEL STYLE -->
 
-                <!-- TRAVEL STYLE -->
+                <div class="form-group">
 
-<div class="form-group">
+                    <label>🎒 Travel Style</label>
 
-    <label>🎒 Travel Style</label>
+                    <select name="travel_style" required>
 
-    <select name="travel_style" required>
+                        <option value="Balanced" selected>
+                            ⚖️ Balanced
+                        </option>
 
-        <option value="Balanced" selected>
-            ⚖️ Balanced
-        </option>
+                        <option value="Budget">
+                            💰 Budget
+                        </option>
 
-        <option value="Budget">
-            💰 Budget
-        </option>
+                        <option value="Luxury">
+                            💎 Luxury
+                        </option>
 
-        <option value="Luxury">
-            💎 Luxury
-        </option>
+                        <option value="Adventure">
+                            🏔️ Adventure
+                        </option>
 
-        <option value="Adventure">
-            🏔️ Adventure
-        </option>
+                        <option value="Family">
+                            👨‍👩‍👧‍👦 Family
+                        </option>
 
-        <option value="Family">
-            👨‍👩‍👧‍👦 Family
-        </option>
+                        <option value="Romantic">
+                            ❤️ Romantic
+                        </option>
 
-        <option value="Romantic">
-            ❤️ Romantic
-        </option>
+                    </select>
 
-    </select>
+                </div>
 
-</div>
             </div>
 
 
@@ -237,10 +268,13 @@
 
             <!-- LOADING MESSAGE -->
 
-            <div id="loadingMessage" style="display:none; text-align:center; margin-top:20px;">
+            <div id="loadingMessage"
+                 style="display:none; text-align:center; margin-top:20px;">
 
                 ✈️ Gemini AI is creating your personalized itinerary...
+
                 <br>
+
                 <small>
                     This may take a few seconds.
                 </small>
@@ -282,6 +316,8 @@
 
     <div class="destination-grid">
 
+        <!-- BALI -->
+
         <div class="destination-card large-card">
 
             <img
@@ -306,6 +342,8 @@
 
         </div>
 
+
+        <!-- PARIS -->
 
         <div class="destination-card">
 
@@ -332,6 +370,8 @@
         </div>
 
 
+        <!-- DUBAI -->
+
         <div class="destination-card">
 
             <img
@@ -357,6 +397,8 @@
         </div>
 
 
+        <!-- KYOTO -->
+
         <div class="destination-card">
 
             <img
@@ -381,6 +423,8 @@
 
         </div>
 
+
+        <!-- SWITZERLAND -->
 
         <div class="destination-card">
 
@@ -678,7 +722,7 @@
 
         <div class="footer-brand">
 
-            <a href="#home" class="logo">
+            <a href="/" class="logo">
 
                 <span class="logo-icon">
                     ✈
@@ -715,6 +759,10 @@
                 AI Planner
             </a>
 
+            <a href="/history">
+                Trip History
+            </a>
+
         </div>
 
 
@@ -730,6 +778,10 @@
 
             <a href="#planner">
                 Plan a Trip
+            </a>
+
+            <a href="/history">
+                Saved Trips
             </a>
 
         </div>
@@ -777,6 +829,8 @@
 </footer>
 
 
+<!-- ================= JAVASCRIPT ================= -->
+
 <script>
 
 function toggleMenu() {
@@ -784,7 +838,9 @@ function toggleMenu() {
     const nav = document.querySelector(".nav-links");
 
     if (nav) {
+
         nav.classList.toggle("active");
+
     }
 
 }
@@ -796,20 +852,35 @@ if (travelForm) {
 
     travelForm.addEventListener("submit", function () {
 
-        const button = document.getElementById("plannerButton");
-        const loading = document.getElementById("loadingMessage");
-        const buttonText = document.getElementById("buttonText");
+        const button =
+            document.getElementById("plannerButton");
+
+        const loading =
+            document.getElementById("loadingMessage");
+
+        const buttonText =
+            document.getElementById("buttonText");
+
 
         if (button) {
+
             button.disabled = true;
+
         }
+
 
         if (buttonText) {
-            buttonText.textContent = "Creating itinerary...";
+
+            buttonText.textContent =
+                "Creating itinerary...";
+
         }
 
+
         if (loading) {
+
             loading.style.display = "block";
+
         }
 
     });
@@ -817,6 +888,7 @@ if (travelForm) {
 }
 
 </script>
+
 
 </body>
 </html>
