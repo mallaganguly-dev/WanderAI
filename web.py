@@ -886,88 +886,81 @@ IMPORTANT OUTPUT RULES
 - The WanderAI website will automatically create Google Maps buttons.
 """
 
-    # ----------------------------------------------
+    # --------------------------------------------------
     # GEMINI FALLBACK SYSTEM
-    # ----------------------------------------------
+    # --------------------------------------------------
 
-    for model in MODELS:
+    # Primary model first, then reliable fallback.
+    models_to_try = [
+        "gemini-3-flash-preview",
+        "gemma-4-26b-a4b-it",
+    ]
 
-        print(
-            f"\n🤖 Trying model: {model}"
-        )
+    for model in models_to_try:
 
-        for attempt in range(2):
+        print(f"\n🤖 Trying model: {model}")
 
-            try:
+        try:
 
+            print("Attempt 1/1")
+
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt
+            )
+
+            if response and response.text:
+
+                print(f"✅ Success with {model}")
+
+                return response.text
+
+            print(f"⚠️ {model} returned an empty response.")
+
+        except Exception as e:
+
+            error = str(e)
+
+            print(f"❌ {model} error: {error}")
+
+            # Move immediately to the next model.
+            # Do NOT wait and retry the same model.
+            if (
+                "503" in error
+                or "UNAVAILABLE" in error
+                or "high demand" in error.lower()
+                or "429" in error
+                or "RESOURCE_EXHAUSTED" in error
+                or "404" in error
+                or "NOT_FOUND" in error
+                or "500" in error
+                or "INTERNAL" in error
+            ):
                 print(
-                    f"Attempt {attempt + 1}/2"
+                    f"⚠️ Moving to fallback model..."
                 )
+                continue
 
-                response = client.models.generate_content(
-                    model=model,
-                    contents=prompt
-                )
+            # Any other Gemini error also moves to fallback.
+            print(
+                "⚠️ Unexpected Gemini error. "
+                "Moving to fallback model..."
+            )
+            continue
 
-                if response.text:
-
-                    print(
-                        f"✅ Success with {model}"
-                    )
-
-                    return response.text
-
-                print(
-                    f"⚠️ {model} returned an empty response."
-                )
-
-            except Exception as e:
-
-                error = str(e)
-
-                print(
-                    f"❌ {model} error: {error}"
-                )
-
-                # Retry temporary Gemini errors
-                if (
-                    "503" in error
-                    or "UNAVAILABLE" in error
-                    or "high demand" in error.lower()
-                ):
-
-                    if attempt == 0:
-
-                        print(
-                            "⏳ Waiting 3 seconds before retry..."
-                        )
-
-                        time.sleep(3)
-
-                    continue
-
-                # Skip unavailable model
-                if (
-                    "404" in error
-                    or "NOT_FOUND" in error
-                ):
-
-                    print(
-                        f"⚠️ Skipping unavailable model: {model}"
-                    )
-
-                    break
-
-                break
+    # --------------------------------------------------
+    # FINAL FALLBACK
+    # --------------------------------------------------
 
     return """
 # AI Service Temporarily Busy
 
-WanderAI could not connect to an available Gemini model right now.
+WanderAI could not generate the itinerary at this moment.
 
-Your website and API configuration are working correctly.
+Your travel request was received, but the AI service is temporarily
+unavailable.
 
-Please wait a short time and try Plan My Trip again.
+Please try Plan My Trip again in a short while.
 """
 
 
