@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request,jsonify
 from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 import os
@@ -25,16 +26,18 @@ api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
     raise ValueError("GEMINI_API_KEY is missing from .env")
 
-client = genai.Client(api_key=api_key)
+client = genai.Client(
+    api_key=api_key,
+    http_options=types.HttpOptions(
+        timeout=120000
+    )
+)
 
 MODEL = "gemini-3.5-flash-lite"
 
 MODELS = [
-    "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    MODEL,
-    "gemini-3.1-flash-lite",
-    "gemini-flash-lite-latest"
+   
+    MODEL
 ]
 
 
@@ -993,9 +996,13 @@ IMPORTANT OUTPUT RULES
                 )
 
                 response = client.models.generate_content(
-                    model=model,
-                    contents=prompt
-                )
+    model=model,
+    contents=prompt,
+    config=types.GenerateContentConfig(
+        temperature=0.4,
+        max_output_tokens=5000
+    )
+)
 
                 if response.text:
 
