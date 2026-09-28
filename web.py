@@ -1,21 +1,16 @@
-from flask import Flask, render_template, request,jsonify
+from flask import Flask, render_template, request, jsonify
 from google import genai
-from google.genai import types
 from dotenv import load_dotenv
-
 import os
 import time
 import re
 import requests
 import sqlite3
-
 from urllib.parse import quote_plus
-
 
 load_dotenv()
 
 app = Flask(__name__)
-
 
 # ==================================================
 # GEMINI API
@@ -26,18 +21,14 @@ api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
     raise ValueError("GEMINI_API_KEY is missing from .env")
 
-client = genai.Client(
-    api_key=api_key,
-    http_options=types.HttpOptions(
-        timeout=120000
-    )
-)
+client = genai.Client(api_key=api_key)
 
 MODEL = "gemini-3.5-flash-lite"
 
 MODELS = [
-   
-    MODEL
+     "gemini-3-flash-preview",
+    "gemini-3.6-flash",
+    "gemma-4-26b-a4b-it"
 ]
 
 
@@ -46,9 +37,7 @@ MODELS = [
 # ==================================================
 
 def google_maps_link(place, destination):
-
     query = f"{place}, {destination}"
-
     encoded_query = quote_plus(query)
 
     return (
@@ -65,7 +54,7 @@ def add_google_maps_links(itinerary, destination):
 
     # Clean escaped characters
     itinerary = itinerary.replace("\\#", "#")
-    itinerary = itinerary.replace("\\&", "&")
+    itinerary = itinerary.replace("\\*", "*")
 
     # Force location markers onto separate lines
     itinerary = re.sub(
@@ -90,7 +79,6 @@ def add_google_maps_links(itinerary, destination):
     )
 
     lines = itinerary.splitlines()
-
     output = []
 
     for line in lines:
@@ -105,30 +93,21 @@ def add_google_maps_links(itinerary, destination):
 
         # Normal line
         if not match:
-
             output.append(line)
-
             continue
 
         kind = match.group(1).upper()
-
         place = match.group(2).strip()
 
         # Remove Markdown bold
-        place = re.sub(
-            r"\*\*",
-            "",
-            place
-        )
+        place = re.sub(r"\*\*", "", place)
 
         # Remove brackets
         place = place.strip("[]()")
 
         # Ignore empty values
         if not place:
-
             output.append(line)
-
             continue
 
         # Ignore placeholders
@@ -140,9 +119,7 @@ def add_google_maps_links(itinerary, destination):
             "a suitable hotel",
             "a specific restaurant"
         ]:
-
             output.append(line)
-
             continue
 
         # Create Maps URL
@@ -156,19 +133,16 @@ def add_google_maps_links(itinerary, destination):
 
         # Create button
         if kind == "PLACE":
-
             button_text = (
                 f"📍 Open {place} in Google Maps"
             )
 
         elif kind == "RESTAURANT":
-
             button_text = (
                 f"🍜 Find {place} on Google Maps"
             )
 
         else:
-
             button_text = (
                 f"🏨 Find {place} on Google Maps"
             )
@@ -217,13 +191,11 @@ def get_weather(destination):
         geocode_data = geocode_response.json()
 
         if not geocode_data.get("results"):
-
             return None
 
         location = geocode_data["results"][0]
 
         latitude = location["latitude"]
-
         longitude = location["longitude"]
 
         city_name = location.get(
@@ -249,22 +221,18 @@ def get_weather(destination):
             params={
                 "latitude": latitude,
                 "longitude": longitude,
-
                 "current": (
                     "temperature_2m,"
                     "apparent_temperature,"
                     "weather_code,"
                     "wind_speed_10m"
                 ),
-
                 "daily": (
                     "weather_code,"
                     "temperature_2m_max,"
                     "temperature_2m_min"
                 ),
-
                 "forecast_days": 7,
-
                 "timezone": "auto"
             },
             timeout=10
@@ -289,32 +257,24 @@ def get_weather(destination):
         # ------------------------------------------
 
         weather_codes = {
-
             0: "Clear sky",
-
             1: "Mainly clear",
             2: "Partly cloudy",
             3: "Overcast",
-
             45: "Fog",
             48: "Depositing rime fog",
-
             51: "Light drizzle",
             53: "Moderate drizzle",
             55: "Dense drizzle",
-
             61: "Slight rain",
             63: "Moderate rain",
             65: "Heavy rain",
-
             71: "Slight snow",
             73: "Moderate snow",
             75: "Heavy snow",
-
             80: "Slight rain showers",
             81: "Moderate rain showers",
             82: "Violent rain showers",
-
             95: "Thunderstorm",
             96: "Thunderstorm with hail",
             99: "Thunderstorm with heavy hail"
@@ -325,32 +285,24 @@ def get_weather(destination):
         # ------------------------------------------
 
         weather_icons = {
-
             0: "☀️",
-
             1: "🌤️",
             2: "⛅",
             3: "☁️",
-
             45: "🌫️",
             48: "🌫️",
-
             51: "🌦️",
             53: "🌦️",
             55: "🌧️",
-
             61: "🌧️",
             63: "🌧️",
             65: "🌧️",
-
             71: "🌨️",
             73: "❄️",
             75: "❄️",
-
             80: "🌦️",
             81: "🌧️",
             82: "⛈️",
-
             95: "⛈️",
             96: "⛈️",
             99: "⛈️"
@@ -395,23 +347,18 @@ def get_weather(destination):
             code = codes[i]
 
             forecast.append({
-
                 "date": dates[i],
-
                 "icon": weather_icons.get(
                     code,
                     "🌤️"
                 ),
-
                 "description": weather_codes.get(
                     code,
                     "Unknown"
                 ),
-
                 "max": round(
                     max_temps[i]
                 ),
-
                 "min": round(
                     min_temps[i]
                 )
@@ -427,9 +374,7 @@ def get_weather(destination):
         )
 
         return {
-
             "city": city_name,
-
             "country": country,
 
             "temperature": round(
@@ -623,9 +568,7 @@ def get_currency_info(destination, budget):
         destination_lower = destination.lower()
 
         target_currency = None
-
         symbol = ""
-
         currency_name = ""
 
         # Find destination currency
@@ -634,16 +577,13 @@ def get_currency_info(destination, budget):
             if country.lower() in destination_lower:
 
                 target_currency = currency_data[0]
-
                 symbol = currency_data[1]
-
                 currency_name = currency_data[2]
 
                 break
 
         # Currency not found
         if not target_currency:
-
             return None
 
         # User budget is treated as USD
@@ -653,25 +593,18 @@ def get_currency_info(destination, budget):
         if target_currency == base_currency:
 
             return {
-
                 "base_currency": "USD",
-
                 "target_currency": target_currency,
-
                 "symbol": symbol,
-
                 "currency_name": currency_name,
-
                 "original_amount": round(
                     float(budget),
                     2
                 ),
-
                 "converted_amount": round(
                     float(budget),
                     2
                 ),
-
                 "rate": 1
             }
 
@@ -700,25 +633,18 @@ def get_currency_info(destination, budget):
         )
 
         return {
-
             "base_currency": base_currency,
-
             "target_currency": target_currency,
-
             "symbol": symbol,
-
             "currency_name": currency_name,
-
             "original_amount": round(
                 float(budget),
                 2
             ),
-
             "converted_amount": round(
                 converted_amount,
                 2
             ),
-
             "rate": rate
         }
 
@@ -750,7 +676,6 @@ Create a realistic {days}-day travel itinerary for a real traveler.
 
 TRIP INFORMATION
 ----------------
-
 Destination:
 {destination}
 
@@ -765,7 +690,6 @@ Traveler Interests:
 
 Travel Style:
 {travel_style}
-
 
 TRAVEL STYLE GUIDELINES
 -----------------------
@@ -806,10 +730,8 @@ If the travel style is Romantic:
 - Include good dining options.
 - Keep the schedule relaxed.
 
-
 IMPORTANT TRAVEL PLANNING RULES
 ------------------------------
-
 1. Create a practical itinerary for a real traveler.
 2. Prioritize the traveler's interests.
 3. Group nearby attractions together.
@@ -833,10 +755,8 @@ IMPORTANT TRAVEL PLANNING RULES
 21. Do not output technical information.
 22. Do not discuss how you generated the itinerary.
 
-
 HOTEL AND RESTAURANT RULES
 --------------------------
-
 For each day:
 
 - Recommend 1 suitable hotel/accommodation option.
@@ -857,7 +777,6 @@ Food:
 RESTAURANT: [specific real restaurant name]
 Description: [recommended food or reason to visit]
 
-
 REQUIRED FORMAT
 ---------------
 
@@ -868,7 +787,6 @@ Duration:
 Budget:
 Travel Style:
 Interests:
-
 
 # Day 1
 
@@ -898,7 +816,6 @@ Transportation:
 Estimated Cost:
 [cost]
 
-
 # Day 2
 
 Morning:
@@ -927,9 +844,7 @@ Transportation:
 Estimated Cost:
 [cost]
 
-
 Continue this format for every day.
-
 
 # Budget Breakdown
 
@@ -941,31 +856,26 @@ Other:
 Total Estimated Cost:
 Remaining Budget:
 
-
 # Food Recommendations
 
 RESTAURANT: [specific real restaurant or food location]
 Description: [recommendation]
 
-
 # Transportation
 
 Explain the best ways to move around the destination.
-
 
 # Practical Travel Tips
 
 Provide useful tips about safety, local transport, timing, money,
 weather, etiquette, and important travel considerations.
 
-
 IMPORTANT OUTPUT RULES
 ----------------------
-
 - Do NOT create Markdown links.
 - Do NOT create Google Maps URLs.
 - Do NOT write links such as [Place Name](URL).
-- Do NOT include https://www.google.com/maps in your response.
+- Do NOT include Google Maps URLs in your response.
 - Only provide the PLACE name.
 - Only provide the RESTAURANT name.
 - Only provide the HOTEL name.
@@ -975,7 +885,6 @@ IMPORTANT OUTPUT RULES
 - Keep all headings on separate lines.
 - The WanderAI website will automatically create Google Maps buttons.
 """
-
 
     # ----------------------------------------------
     # GEMINI FALLBACK SYSTEM
@@ -996,13 +905,9 @@ IMPORTANT OUTPUT RULES
                 )
 
                 response = client.models.generate_content(
-    model=model,
-    contents=prompt,
-    config=types.GenerateContentConfig(
-        temperature=0.4,
-        max_output_tokens=5000
-    )
-)
+                    model=model,
+                    contents=prompt
+                )
 
                 if response.text:
 
@@ -1055,7 +960,6 @@ IMPORTANT OUTPUT RULES
 
                 break
 
-
     return """
 # AI Service Temporarily Busy
 
@@ -1074,15 +978,8 @@ Please wait a short time and try Plan My Trip again.
 def format_itinerary(itinerary):
 
     # Fix escaped characters
-    itinerary = itinerary.replace(
-        "\\#",
-        "#"
-    )
-
-    itinerary = itinerary.replace(
-        "\\&",
-        "&"
-    )
+    itinerary = itinerary.replace("\\#", "#")
+    itinerary = itinerary.replace("\\*", "*")
 
     # Convert Markdown links to HTML
     markdown_link_pattern = (
@@ -1096,10 +993,7 @@ def format_itinerary(itinerary):
             ""
         )
 
-        url = match.group(2).replace(
-            "\\&",
-            "&"
-        )
+        url = match.group(2)
 
         return (
             f'<a href="{url}" '
@@ -1118,15 +1012,10 @@ def format_itinerary(itinerary):
 
     # Major headings
     major_headings = [
-
         "Trip Overview",
-
         "Budget Breakdown",
-
         "Food Recommendations",
-
         "Transportation",
-
         "Practical Travel Tips"
     ]
 
@@ -1149,35 +1038,20 @@ def format_itinerary(itinerary):
 
     # Common sections
     sections = [
-
         "Morning:",
-
         "Afternoon:",
-
         "Evening:",
-
         "Food:",
-
         "Transportation:",
-
         "Estimated Cost:",
-
         "Description:",
-
         "Accommodation:",
-
         "HOTEL:",
-
         "Activities:",
-
         "Other:",
-
         "Total Estimated Cost:",
-
         "Remaining Budget:",
-
         "PLACE:",
-
         "RESTAURANT:"
     ]
 
@@ -1195,7 +1069,6 @@ def format_itinerary(itinerary):
     html = []
 
     day_open = False
-
     overview_open = False
 
     for line in lines:
@@ -1203,7 +1076,6 @@ def format_itinerary(itinerary):
         line = line.strip()
 
         if not line:
-
             continue
 
         line = line.replace(
@@ -1222,15 +1094,11 @@ def format_itinerary(itinerary):
         ):
 
             if day_open:
-
                 html.append("</div>")
-
                 day_open = False
 
             if overview_open:
-
                 html.append("</div>")
-
                 overview_open = False
 
             day_title = re.sub(
@@ -1255,13 +1123,10 @@ def format_itinerary(itinerary):
         ):
 
             if day_open:
-
                 html.append("</div>")
-
                 day_open = False
 
             if overview_open:
-
                 html.append("</div>")
 
             html.append(
@@ -1280,24 +1145,20 @@ def format_itinerary(itinerary):
         elif line.startswith("#"):
 
             if day_open:
-
                 html.append("</div>")
-
                 day_open = False
 
             if overview_open:
-
                 html.append("</div>")
-
                 overview_open = False
 
             title = line.lstrip("#").strip()
 
             html.append(
                 '<div class="overview-section">'
-                f'<div class="overview-title">'
+                '<div class="overview-title">'
                 f'{title}'
-                f'</div>'
+                '</div>'
             )
 
             overview_open = True
@@ -1329,20 +1190,30 @@ def format_itinerary(itinerary):
                 re.IGNORECASE
             )
 
-            marker = marker_match.group(1).upper()
+            if not marker_match:
+                html.append(
+                    '<div class="normal-text">'
+                    f'{line}'
+                    '</div>'
+                )
+                continue
 
+            marker = marker_match.group(1).upper()
             value = marker_match.group(2).strip()
 
-            if marker == "PLACE":
+            value = re.sub(
+                r"\*\*",
+                "",
+                value
+            )
 
+            if marker == "PLACE":
                 icon = "📍"
 
             elif marker == "HOTEL":
-
                 icon = "🏨"
 
             else:
-
                 icon = "🍜"
 
             html.append(
@@ -1363,29 +1234,17 @@ def format_itinerary(itinerary):
             section = line[:-1].strip()
 
             icons = {
-
                 "Morning": "🌅",
-
                 "Afternoon": "☀️",
-
                 "Evening": "🌆",
-
                 "Food": "🍜",
-
                 "Transportation": "🚆",
-
                 "Estimated Cost": "💰",
-
                 "Description": "📝",
-
                 "Accommodation": "🏨",
-
                 "Activities": "🎟️",
-
                 "Other": "📦",
-
                 "Total Estimated Cost": "💰",
-
                 "Remaining Budget": "💵"
             }
 
@@ -1448,12 +1307,10 @@ def format_itinerary(itinerary):
 
     # Close day
     if day_open:
-
         html.append("</div>")
 
     # Close overview
     if overview_open:
-
         html.append("</div>")
 
     return "\n".join(html)
@@ -1476,28 +1333,19 @@ def init_database():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS trips (
-
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-
             destination TEXT NOT NULL,
-
             days INTEGER,
-
             budget REAL,
-
             interests TEXT,
-
             travel_style TEXT,
-
             itinerary TEXT,
-
             created_at TIMESTAMP
                 DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
     connection.commit()
-
     connection.close()
 
 
@@ -1540,7 +1388,6 @@ def save_trip(
     )
 
     connection.commit()
-
     connection.close()
 
 
@@ -1586,14 +1433,30 @@ def index():
     return render_template(
         "index.html"
     )
-@app.route("/chat", methods=["POST"])
+
+
+# ==================================================
+# CHAT
+# ==================================================
+
+@app.route(
+    "/chat",
+    methods=["POST"]
+)
 def chat():
 
     data = request.get_json()
 
-    message = data.get("message", "").strip()
+    if not data:
+        data = {}
+
+    message = data.get(
+        "message",
+        ""
+    ).strip()
 
     if not message:
+
         return jsonify({
             "reply": "Please enter a message."
         })
@@ -1630,25 +1493,49 @@ User message:
 
     except Exception as e:
 
+        print(
+            f"Chat error: {e}"
+        )
+
         return jsonify({
             "reply": "Sorry, I couldn't process your request right now."
         })
 
+
+# ==================================================
+# OTHER PAGES
+# ==================================================
+
 @app.route("/chatbot")
 def chatbot():
-    return render_template("chatbot.html")
+
+    return render_template(
+        "chatbot.html"
+    )
+
+
 @app.route("/booking")
 def booking():
-    return render_template("booking.html")
+
+    return render_template(
+        "booking.html"
+    )
+
 
 @app.route("/login")
 def login():
-    return render_template("login.html")
+
+    return render_template(
+        "login.html"
+    )
 
 
 @app.route("/signup")
 def signup():
-    return render_template("signup.html")
+
+    return render_template(
+        "signup.html"
+    )
 
 
 # ==================================================
@@ -1699,28 +1586,18 @@ def view_trip(trip_id):
     connection.close()
 
     if not trip:
-
         return "Trip not found", 404
 
     return render_template(
         "result.html",
-
         destination=trip["destination"],
-
-        from_location=trip.get("from_location", ""),
-
+        from_location="",
         days=trip["days"],
-
         budget=trip["budget"],
-
         interests=trip["interests"],
-
         travel_style=trip["travel_style"],
-
         itinerary=trip["itinerary"],
-
         weather=None,
-
         currency=None
     )
 
@@ -1729,11 +1606,10 @@ def view_trip(trip_id):
 # PLAN TRIP
 # ==================================================
 
-# ==================================================
-# PLAN TRIP
-# ==================================================
-
-@app.route("/plan", methods=["POST"])
+@app.route(
+    "/plan",
+    methods=["POST"]
+)
 def plan():
 
     # ----------------------------------------------
@@ -1748,7 +1624,6 @@ def plan():
     if not destination:
         destination = "Tokyo, Japan"
 
-
     # ----------------------------------------------
     # FROM LOCATION
     # ----------------------------------------------
@@ -1757,7 +1632,6 @@ def plan():
         "from_location",
         ""
     ).strip()
-
 
     # ----------------------------------------------
     # DAYS
@@ -1769,6 +1643,7 @@ def plan():
     ).strip()
 
     try:
+
         days = int(days_value)
 
         if days < 1:
@@ -1777,9 +1652,9 @@ def plan():
         if days > 30:
             days = 30
 
-    except:
-        days = 7
+    except (ValueError, TypeError):
 
+        days = 7
 
     # ----------------------------------------------
     # BUDGET
@@ -1799,10 +1674,9 @@ def plan():
         if budget <= 0:
             budget = 3000.0
 
-    except:
+    except (ValueError, TypeError):
 
         budget = 3000.0
-
 
     # ----------------------------------------------
     # INTERESTS
@@ -1816,7 +1690,6 @@ def plan():
     if not interests:
         interests = "food, culture, history"
 
-
     # ----------------------------------------------
     # TRAVEL STYLE
     # ----------------------------------------------
@@ -1828,7 +1701,6 @@ def plan():
 
     if not travel_style:
         travel_style = "Balanced"
-
 
     # ----------------------------------------------
     # GENERATE ITINERARY
@@ -1842,7 +1714,6 @@ def plan():
         travel_style
     )
 
-
     # ----------------------------------------------
     # REAL WEATHER
     # ----------------------------------------------
@@ -1850,7 +1721,6 @@ def plan():
     weather = get_weather(
         destination
     )
-
 
     # ----------------------------------------------
     # CURRENCY CONVERSION
@@ -1861,7 +1731,6 @@ def plan():
         budget
     )
 
-
     # ----------------------------------------------
     # GOOGLE MAPS LINKS
     # ----------------------------------------------
@@ -1871,7 +1740,6 @@ def plan():
         destination
     )
 
-
     # ----------------------------------------------
     # FORMAT ITINERARY
     # ----------------------------------------------
@@ -1879,7 +1747,6 @@ def plan():
     itinerary_with_maps = format_itinerary(
         itinerary_with_maps
     )
-
 
     # ----------------------------------------------
     # SAVE TRIP
@@ -1893,7 +1760,6 @@ def plan():
         travel_style,
         itinerary_with_maps
     )
-
 
     # ----------------------------------------------
     # SHOW RESULT
@@ -1913,12 +1779,12 @@ def plan():
     )
 
 
-
 # ==================================================
 # RUN SERVER
 # ==================================================
 
 if __name__ == "__main__":
+
     app.run(
         host="0.0.0.0",
         port=int(
