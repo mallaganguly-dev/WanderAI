@@ -1261,8 +1261,13 @@
             </div>
 
             <div class="summary-value">
+                {% if currency %}
+                {{ currency.base_symbol }}{{ "%.2f"|format(budget) }}
+                {{ currency.base_currency }}
+                {% else %}
                 ${{ "%.2f"|format(budget) }}
                 USD
+                {% endif %}
             </div>
 
         </div>
@@ -1321,7 +1326,12 @@
             <div>
 
                 <div class="currency-label">
-                    💱 LOCAL CURRENCY
+                    {% if currency.target_currency ==
+                        currency.base_currency %}
+                    SELECTED CURRENCY
+                    {% else %}
+                    LOCAL CURRENCY
+                    {% endif %}
                 </div>
 
 
@@ -1387,11 +1397,13 @@
 
                     <strong>
 
-                        ${{ "{:,.2f}".format(
+                        {{ currency.base_symbol }}
+
+                        {{ "{:,.2f}".format(
                             currency.original_amount
                         ) }}
 
-                        USD
+                        {{ currency.base_currency }}
 
                     </strong>
 
@@ -1417,9 +1429,11 @@
 
                     <strong>
 
-                        1 USD =
+                        1 {{ currency.base_currency }} =
 
-                        {{ currency.rate }}
+                        {{ "{:,.4f}".format(
+                            currency.rate
+                        ) }}
 
                         {{ currency.target_currency }}
 
@@ -1442,7 +1456,12 @@
                 <div>
 
                     <small>
+                        {% if currency.target_currency ==
+                            currency.base_currency %}
+                        Selected Currency
+                        {% else %}
                         Destination Currency
+                        {% endif %}
                     </small>
 
                     <strong>

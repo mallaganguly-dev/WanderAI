@@ -15,7 +15,7 @@ import {
 // ================= FIREBASE CONFIG =================
 
 const firebaseConfig = {
-    apiKey: "YOUR_EXISTING_FIREBASE_API_KEY",
+    apiKey: "AIzaSyAfbK6Inq9Jsrs9Spp3M7vySdWNkdALWc0",
     authDomain: "wanderai-f84d2.firebaseapp.com",
     projectId: "wanderai-f84d2",
     storageBucket: "wanderai-f84d2.firebasestorage.app",

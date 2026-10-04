@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 from google import genai
 from dotenv import load_dotenv
+from admin import admin_bp, ensure_main_admin
 import os
 import time
 import re
@@ -11,6 +12,15 @@ from urllib.parse import quote_plus
 load_dotenv()
 
 app = Flask(__name__)
+
+app.config["SECRET_KEY"] = os.getenv(
+    "SECRET_KEY",
+    "wanderai-dev-secret-key"
+)
+
+app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 8
+
+app.register_blueprint(admin_bp)
 
 # ==================================================
 # GEMINI API
@@ -426,232 +436,341 @@ def get_weather(destination):
 # CURRENCY CONVERSION
 # ==================================================
 
-def get_currency_info(destination, budget):
+# Every supported currency: code -> (symbol, name)
+
+CURRENCIES = {
+    "USD": ("$", "US Dollar"),
+    "EUR": ("\u20ac", "Euro"),
+    "GBP": ("\u00a3", "British Pound"),
+    "JPY": ("\u00a5", "Japanese Yen"),
+    "INR": ("\u20b9", "Indian Rupee"),
+    "AUD": ("A$", "Australian Dollar"),
+    "CAD": ("C$", "Canadian Dollar"),
+    "CHF": ("CHF", "Swiss Franc"),
+    "CNY": ("\u00a5", "Chinese Yuan"),
+    "HKD": ("HK$", "Hong Kong Dollar"),
+    "SGD": ("S$", "Singapore Dollar"),
+    "TWD": ("NT$", "New Taiwan Dollar"),
+    "KRW": ("\u20a9", "South Korean Won"),
+    "NZD": ("NZ$", "New Zealand Dollar"),
+    "MXN": ("MX$", "Mexican Peso"),
+    "BRL": ("R$", "Brazilian Real"),
+    "ARS": ("AR$", "Argentine Peso"),
+    "CLP": ("CLP$", "Chilean Peso"),
+    "COP": ("CO$", "Colombian Peso"),
+    "PEN": ("S/", "Peruvian Sol"),
+    "UYU": ("UY$", "Uruguayan Peso"),
+    "ZAR": ("R", "South African Rand"),
+    "EGP": ("E\u00a3", "Egyptian Pound"),
+    "NGN": ("\u20a6", "Nigerian Naira"),
+    "KES": ("KSh", "Kenyan Shilling"),
+    "MAD": ("MAD", "Moroccan Dirham"),
+    "TND": ("DT", "Tunisian Dinar"),
+    "AED": ("AED", "UAE Dirham"),
+    "SAR": ("SAR", "Saudi Riyal"),
+    "QAR": ("QAR", "Qatari Riyal"),
+    "KWD": ("KD", "Kuwaiti Dinar"),
+    "BHD": ("BD", "Bahraini Dinar"),
+    "OMR": ("OMR", "Omani Rial"),
+    "JOD": ("JD", "Jordanian Dinar"),
+    "ILS": ("\u20aa", "Israeli Shekel"),
+    "TRY": ("\u20ba", "Turkish Lira"),
+    "RUB": ("\u20bd", "Russian Ruble"),
+    "UAH": ("\u20b4", "Ukrainian Hryvnia"),
+    "PLN": ("z\u0142", "Polish Zloty"),
+    "CZK": ("K\u010d", "Czech Koruna"),
+    "HUF": ("Ft", "Hungarian Forint"),
+    "RON": ("lei", "Romanian Leu"),
+    "BGN": ("\u043b\u0432", "Bulgarian Lev"),
+    "HRK": ("kn", "Croatian Kuna"),
+    "RSD": ("\u0434\u0438\u043d", "Serbian Dinar"),
+    "SEK": ("kr", "Swedish Krona"),
+    "NOK": ("kr", "Norwegian Krone"),
+    "DKK": ("kr", "Danish Krone"),
+    "ISK": ("kr", "Icelandic Krona"),
+    "THB": ("\u0e3f", "Thai Baht"),
+    "VND": ("\u20ab", "Vietnamese Dong"),
+    "IDR": ("Rp", "Indonesian Rupiah"),
+    "MYR": ("RM", "Malaysian Ringgit"),
+    "PHP": ("\u20b1", "Philippine Peso"),
+    "LAK": ("\u20ad", "Laotian Kip"),
+    "KHR": ("\u17db", "Cambodian Riel"),
+    "MMK": ("K", "Myanmar Kyat"),
+    "BDT": ("\u09f3", "Bangladeshi Taka"),
+    "LKR": ("Rs", "Sri Lankan Rupee"),
+    "NPR": ("\u20a8", "Nepalese Rupee"),
+    "PKR": ("\u20a8", "Pakistani Rupee"),
+    "AFN": ("\u060b", "Afghan Afghani"),
+    "IRR": ("\ufdfc", "Iranian Rial"),
+    "IQD": ("\u062f\u0639", "Iraqi Dinar"),
+    "GHS": ("\u20b5", "Ghanaian Cedi"),
+    "TZS": ("TSh", "Tanzanian Shilling"),
+    "UGX": ("USh", "Ugandan Shilling"),
+    "ETB": ("Br", "Ethiopian Birr"),
+    "CRC": ("\u20a1", "Costa Rican Colon"),
+    "DOP": ("RD$", "Dominican Peso"),
+    "JMD": ("J$", "Jamaican Dollar"),
+    "TTD": ("TT$", "Trinidad Dollar"),
+    "BBD": ("Bds$", "Barbadian Dollar"),
+    "BOB": ("Bs", "Bolivian Boliviano"),
+    "PYG": ("\u20b2", "Paraguayan Guarani"),
+    "VES": ("Bs.S", "Venezuelan Bolivar"),
+    "GTQ": ("Q", "Guatemalan Quetzal"),
+    "HNL": ("L", "Honduran Lempira"),
+    "NIO": ("C$", "Nicaraguan Cordoba"),
+    "PAB": ("B/.", "Panamanian Balboa"),
+    "CUP": ("$", "Cuban Peso"),
+    "XAF": ("FCFA", "Central African CFA Franc"),
+    "XOF": ("CFA", "West African CFA Franc"),
+}
+
+
+# Destination country hints used when the user
+# keeps the "Auto" currency option
+
+DESTINATION_CURRENCY_HINTS = {
+    "india": "INR",
+    "japan": "JPY",
+    "united states": "USD",
+    "usa": "USD",
+    "united kingdom": "GBP",
+    "uk": "GBP",
+    "england": "GBP",
+    "scotland": "GBP",
+    "france": "EUR",
+    "germany": "EUR",
+    "italy": "EUR",
+    "spain": "EUR",
+    "portugal": "EUR",
+    "greece": "EUR",
+    "ireland": "EUR",
+    "austria": "EUR",
+    "belgium": "EUR",
+    "netherlands": "EUR",
+    "finland": "EUR",
+    "luxembourg": "EUR",
+    "switzerland": "CHF",
+    "canada": "CAD",
+    "australia": "AUD",
+    "new zealand": "NZD",
+    "singapore": "SGD",
+    "thailand": "THB",
+    "philippines": "PHP",
+    "indonesia": "IDR",
+    "vietnam": "VND",
+    "malaysia": "MYR",
+    "south korea": "KRW",
+    "china": "CNY",
+    "hong kong": "HKD",
+    "taiwan": "TWD",
+    "cambodia": "KHR",
+    "laos": "LAK",
+    "myanmar": "MMK",
+    "maldives": "MVR",
+    "united arab emirates": "AED",
+    "dubai": "AED",
+    "abu dhabi": "AED",
+    "saudi arabia": "SAR",
+    "qatar": "QAR",
+    "kuwait": "KWD",
+    "bahrain": "BHD",
+    "oman": "OMR",
+    "jordan": "JOD",
+    "israel": "ILS",
+    "turkey": "TRY",
+    "russia": "RUB",
+    "ukraine": "UAH",
+    "poland": "PLN",
+    "czech republic": "CZK",
+    "czechia": "CZK",
+    "hungary": "HUF",
+    "romania": "RON",
+    "bulgaria": "BGN",
+    "croatia": "HRK",
+    "serbia": "RSD",
+    "sweden": "SEK",
+    "norway": "NOK",
+    "denmark": "DKK",
+    "iceland": "ISK",
+    "south africa": "ZAR",
+    "egypt": "EGP",
+    "morocco": "MAD",
+    "tunisia": "TND",
+    "nigeria": "NGN",
+    "kenya": "KES",
+    "ghana": "GHS",
+    "tanzania": "TZS",
+    "uganda": "UGX",
+    "ethiopia": "ETB",
+    "iraq": "IQD",
+    "iran": "IRR",
+    "afghanistan": "AFN",
+    "pakistan": "PKR",
+    "bangladesh": "BDT",
+    "nepal": "NPR",
+    "sri lanka": "LKR",
+    "mexico": "MXN",
+    "brazil": "BRL",
+    "argentina": "ARS",
+    "chile": "CLP",
+    "colombia": "COP",
+    "peru": "PEN",
+    "uruguay": "UYU",
+    "bolivia": "BOB",
+    "paraguay": "PYG",
+    "venezuela": "VES",
+    "costa rica": "CRC",
+    "dominican republic": "DOP",
+    "jamaica": "JMD",
+    "trinidad and tobago": "TTD",
+    "barbados": "BBD",
+    "cuba": "CUP",
+    "guatemala": "GTQ",
+    "honduras": "HNL",
+    "nicaragua": "NIO",
+    "panama": "PAB",
+    "senegal": "XOF",
+    "cameroon": "XAF",
+    "cote d'ivoire": "XOF",
+    "ivory coast": "XOF"
+}
+
+
+def detect_destination_currency(destination):
+
+    destination_lower = destination.lower()
+
+    # Longest hint first so "united kingdom"
+    # is not shadowed by "uk"
+
+    for hint in sorted(
+        DESTINATION_CURRENCY_HINTS,
+        key=len,
+        reverse=True
+    ):
+
+        if hint in destination_lower:
+
+            return DESTINATION_CURRENCY_HINTS[hint]
+
+    return None
+
+
+def get_exchange_rate(from_currency, to_currency):
+
+    # Frankfurter uses lowercase codes
+
+    url = (
+        "https://api.frankfurter.dev/v2/rate/"
+        f"{from_currency.lower()}/"
+        f"{to_currency.lower()}"
+    )
+
+    response = requests.get(
+        url,
+        timeout=10
+    )
+
+    response.raise_for_status()
+
+    data = response.json()
+
+    return float(data["rate"])
+
+
+def get_currency_info(
+    destination,
+    budget,
+    selected_currency=None
+):
 
     try:
 
-        currency_map = {
-
-            "India": (
-                "INR",
-                "₹",
-                "Indian Rupee"
-            ),
-
-            "Japan": (
-                "JPY",
-                "¥",
-                "Japanese Yen"
-            ),
-
-            "United States": (
-                "USD",
-                "$",
-                "US Dollar"
-            ),
-
-            "USA": (
-                "USD",
-                "$",
-                "US Dollar"
-            ),
-
-            "United Kingdom": (
-                "GBP",
-                "£",
-                "British Pound"
-            ),
-
-            "UK": (
-                "GBP",
-                "£",
-                "British Pound"
-            ),
-
-            "France": (
-                "EUR",
-                "€",
-                "Euro"
-            ),
-
-            "Germany": (
-                "EUR",
-                "€",
-                "Euro"
-            ),
-
-            "Italy": (
-                "EUR",
-                "€",
-                "Euro"
-            ),
-
-            "Spain": (
-                "EUR",
-                "€",
-                "Euro"
-            ),
-
-            "Switzerland": (
-                "CHF",
-                "CHF",
-                "Swiss Franc"
-            ),
-
-            "Australia": (
-                "AUD",
-                "A$",
-                "Australian Dollar"
-            ),
-
-            "Canada": (
-                "CAD",
-                "C$",
-                "Canadian Dollar"
-            ),
-
-            "Singapore": (
-                "SGD",
-                "S$",
-                "Singapore Dollar"
-            ),
-
-            "Thailand": (
-                "THB",
-                "฿",
-                "Thai Baht"
-            ),
-
-            "UAE": (
-                "AED",
-                "د.إ",
-                "UAE Dirham"
-            ),
-
-            "Dubai": (
-                "AED",
-                "د.إ",
-                "UAE Dirham"
-            ),
-
-            "South Korea": (
-                "KRW",
-                "₩",
-                "South Korean Won"
-            ),
-
-            "China": (
-                "CNY",
-                "¥",
-                "Chinese Yuan"
-            ),
-
-            "Malaysia": (
-                "MYR",
-                "RM",
-                "Malaysian Ringgit"
-            ),
-
-            "Indonesia": (
-                "IDR",
-                "Rp",
-                "Indonesian Rupiah"
-            ),
-
-            "Vietnam": (
-                "VND",
-                "₫",
-                "Vietnamese Dong"
-            )
-        }
-
-        destination_lower = destination.lower()
-
-        target_currency = None
-        symbol = ""
-        currency_name = ""
-
-        # Find destination currency
-        for country, currency_data in currency_map.items():
-
-            if country.lower() in destination_lower:
-
-                target_currency = currency_data[0]
-                symbol = currency_data[1]
-                currency_name = currency_data[2]
-
-                break
-
-        # Currency not found
-        if not target_currency:
-            return None
-
-        # User budget is treated as USD
         base_currency = "USD"
 
-        # USD destination
-        if target_currency == base_currency:
+        # --------------------------------------------------
+        # STEP 1: WHICH CURRENCY IS THE BUDGET IN
+        # --------------------------------------------------
 
-            return {
-                "base_currency": "USD",
-                "target_currency": target_currency,
-                "symbol": symbol,
-                "currency_name": currency_name,
-                "original_amount": round(
-                    float(budget),
-                    2
-                ),
-                "converted_amount": round(
-                    float(budget),
-                    2
-                ),
-                "rate": 1
-            }
-
-        # Frankfurter API
-        url = (
-            "https://api.frankfurter.dev/v2/rate/"
-            f"{base_currency.lower()}/"
-            f"{target_currency.lower()}"
+        chosen = (
+            (selected_currency or "")
+            .strip()
+            .upper()
         )
 
-        response = requests.get(
-            url,
-            timeout=10
+        if chosen in CURRENCIES:
+
+            base_currency = chosen
+
+        else:
+
+            detected = detect_destination_currency(
+                destination
+            )
+
+            if detected:
+
+                base_currency = detected
+
+        base_symbol, base_name = CURRENCIES[base_currency]
+
+        # --------------------------------------------------
+        # STEP 2: WHICH CURRENCY TO SHOW
+        # --------------------------------------------------
+
+        target_currency = detect_destination_currency(
+            destination
         )
 
-        response.raise_for_status()
+        if not target_currency:
 
-        data = response.json()
+            target_currency = base_currency
 
-        rate = float(
-            data["rate"]
+        target_symbol, target_name = CURRENCIES[target_currency]
+
+        # --------------------------------------------------
+        # STEP 3: CONVERSION
+        # --------------------------------------------------
+
+        if base_currency == target_currency:
+
+            rate = 1
+
+        else:
+
+            rate = get_exchange_rate(
+                base_currency,
+                target_currency
+            )
+
+        original_amount = round(
+            float(budget),
+            2
         )
 
-        converted_amount = (
-            float(budget) * rate
+        converted_amount = round(
+            original_amount * rate,
+            2
         )
 
         return {
             "base_currency": base_currency,
+            "base_symbol": base_symbol,
+            "base_name": base_name,
             "target_currency": target_currency,
-            "symbol": symbol,
-            "currency_name": currency_name,
-            "original_amount": round(
-                float(budget),
-                2
-            ),
-            "converted_amount": round(
-                converted_amount,
-                2
-            ),
-            "rate": rate
+            "target_symbol": target_symbol,
+            "symbol": target_symbol,
+            "currency_name": target_name,
+            "original_amount": original_amount,
+            "converted_amount": converted_amount,
+            "rate": rate,
+            "user_selected": chosen == base_currency
         }
 
     except Exception as e:
 
         print(
-            f"⚠️ Currency conversion error: {e}"
+            f"\u26a0\ufe0f Currency conversion error: {e}"
         )
 
         return None
@@ -666,8 +785,14 @@ def generate_itinerary(
     days,
     budget,
     interests,
-    travel_style
+    travel_style,
+    budget_currency="USD"
 ):
+
+    currency_name = CURRENCIES.get(
+        budget_currency,
+        ("", budget_currency)
+    )[1]
 
     prompt = f"""
 You are WanderAI, a professional AI travel planning assistant.
@@ -683,7 +808,14 @@ Number of Days:
 {days}
 
 Total Budget:
-${budget}
+{budget_currency} {budget}
+
+Currency Rules:
+- The traveler's budget is in {budget_currency} ({currency_name}).
+- Report every price, cost and estimate in {budget_currency}.
+- Do not convert the budget into another currency.
+- Mention the destination's local currency only
+  as extra information when it helps the traveler.
 
 Traveler Interests:
 {interests}
@@ -1412,6 +1544,8 @@ def get_trip_history():
 # Initialize database
 init_database()
 
+ensure_main_admin()
+
 
 # ==================================================
 # HOME PAGE
@@ -1424,7 +1558,8 @@ init_database()
 def index():
 
     return render_template(
-        "index.html"
+        "index.html",
+        currencies=CURRENCIES
     )
 
 
@@ -1696,6 +1831,22 @@ def plan():
         travel_style = "Balanced"
 
     # ----------------------------------------------
+    # BUDGET CURRENCY
+    # ----------------------------------------------
+
+    budget_currency = request.form.get(
+        "budget_currency",
+        ""
+    ).strip().upper()
+
+    if budget_currency not in CURRENCIES:
+
+        budget_currency = (
+            detect_destination_currency(destination)
+            or "USD"
+        )
+
+    # ----------------------------------------------
     # GENERATE ITINERARY
     # ----------------------------------------------
 
@@ -1704,7 +1855,8 @@ def plan():
         days,
         budget,
         interests,
-        travel_style
+        travel_style,
+        budget_currency
     )
 
     # ----------------------------------------------
@@ -1721,7 +1873,8 @@ def plan():
 
     currency = get_currency_info(
         destination,
-        budget
+        budget,
+        budget_currency
     )
 
     # ----------------------------------------------

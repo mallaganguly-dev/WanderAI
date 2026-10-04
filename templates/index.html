@@ -55,6 +55,10 @@
                 </a>
                 <a href="/chatbot">🤖 AI Chat</a>
 
+                <a href="/admin/login" class="nav-link">
+                    Admin
+                </a>
+
             </nav>
 
             <!-- ================= RIGHT SIDE ================= -->
@@ -302,8 +306,44 @@
                         id="budget"
                         name="budget"
                         min="0"
+                        step="0.01"
                         value="2000"
                         required>
+
+                </div>
+
+
+                <!-- Budget Currency -->
+
+                <div class="form-group">
+
+                    <label for="budget_currency">
+                        Budget Currency
+                    </label>
+
+                    <select
+                        id="budget_currency"
+                        name="budget_currency"
+                        required>
+
+                        <option value="USD" selected>
+                            $ USD - US Dollar
+                        </option>
+
+                        {% for code, data in currencies.items() %}
+                        {% if code != 'USD' %}
+                        <option value="{{ code }}">
+                            {{ data[0] }} {{ code }} - {{ data[1] }}
+                        </option>
+                        {% endif %}
+                        {% endfor %}
+
+                    </select>
+
+                    <small class="form-hint">
+                        Pick any currency. Costs are
+                        planned in the currency you select.
+                    </small>
 
                 </div>
 

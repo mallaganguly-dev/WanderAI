@@ -463,6 +463,13 @@ img {
     box-shadow: 0 0 0 3px rgba(104, 168, 112, 0.12);
 }
 
+.form-hint {
+    font-size: 12px;
+    color: #777;
+    line-height: 1.5;
+    margin-top: -2px;
+}
+
 .planner-submit {
     grid-column: 1 / -1;
     text-align: center;
