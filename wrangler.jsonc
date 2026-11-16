@@ -13,6 +13,14 @@
       "database_id": "d3a7745a-daca-4220-8b40-8be97285db9c"
     }
   ],
+  "previews": {
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_id": "d3a7745a-daca-4220-8b40-8be97285db9c"
+      }
+    ]
+  },
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
