@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "wanderai",
-  "main": "worker.py",
+  "main": "src/worker.py",
   "compatibility_date": "2026-11-16",
   "compatibility_flags": [
     "python_workers"
