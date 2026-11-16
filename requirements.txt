@@ -1,7 +1,0 @@
-crewai
-gunicorn
-
-python-dotenv
-google-genai
-requests
-flask
