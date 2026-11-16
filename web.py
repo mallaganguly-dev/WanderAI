@@ -13,10 +13,11 @@ load_dotenv()
 
 app = Flask(__name__)
 
+# Cloudflare Worker secrets are exposed through request.environ["workers.env"],
+# not os.environ. A placeholder keeps module import safe; the real key is
+# applied for each request in configure_worker_environment().
 secret_key = os.getenv("SECRET_KEY")
-if not secret_key:
-    raise RuntimeError("SECRET_KEY must be configured before starting WanderAI.")
-app.config["SECRET_KEY"] = secret_key
+app.config["SECRET_KEY"] = secret_key or "configure-SECRET_KEY-in-Cloudflare"
 
 app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 8
 
@@ -27,11 +28,22 @@ app.register_blueprint(admin_bp)
 # ==================================================
 
 api_key = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key) if api_key else None
 
-if not api_key:
-    raise ValueError("GEMINI_API_KEY is missing from .env")
-
-client = genai.Client(api_key=api_key)
+@app.before_request
+def configure_worker_environment():
+    """Load Cloudflare Worker secrets from the request environment."""
+    global client, api_key
+    worker_env = request.environ.get("workers.env")
+    if worker_env is None:
+        return
+    runtime_secret = getattr(worker_env, "SECRET_KEY", None)
+    if runtime_secret:
+        app.config["SECRET_KEY"] = runtime_secret
+    runtime_api_key = getattr(worker_env, "GEMINI_API_KEY", None)
+    if runtime_api_key and runtime_api_key != api_key:
+        api_key = runtime_api_key
+        client = genai.Client(api_key=api_key)
 
 MODEL = "gemini-3.5-flash-lite"
 
@@ -1541,10 +1553,14 @@ def get_trip_history():
     return trips
 
 
-# Initialize database
-init_database()
-
-ensure_main_admin()
+# Local development initializes SQLite. Cloudflare Worker requests use
+# request-scoped bindings; avoid failing Worker startup on a local filesystem DB.
+if os.getenv("CLOUDFLARE_WORKERS") != "1":
+    try:
+        init_database()
+        ensure_main_admin()
+    except Exception as database_error:
+        print(f"Database initialization deferred: {database_error}")
 
 
 # ==================================================
