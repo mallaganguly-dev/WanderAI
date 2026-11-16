@@ -39,15 +39,8 @@ except Exception:
 DATABASE = "wanderai.db"
 
 
-MAIN_ADMIN_EMAIL = os.getenv(
-    "MAIN_ADMIN_EMAIL",
-    "hari@gmail.com"
-)
-
-MAIN_ADMIN_PASSWORD = os.getenv(
-    "MAIN_ADMIN_PASSWORD",
-    "hari@1234"
-)
+MAIN_ADMIN_EMAIL = os.getenv("MAIN_ADMIN_EMAIL")
+MAIN_ADMIN_PASSWORD = os.getenv("MAIN_ADMIN_PASSWORD")
 
 
 admin_bp = Blueprint(
@@ -349,6 +342,11 @@ def delete_admin(admin_id):
 
 
 def ensure_main_admin():
+
+    if not MAIN_ADMIN_EMAIL or not MAIN_ADMIN_PASSWORD:
+        raise RuntimeError(
+            "MAIN_ADMIN_EMAIL and MAIN_ADMIN_PASSWORD must be configured."
+        )
 
     init_admin_database()
 
