@@ -1,5 +1,10 @@
 .venv/
 .env
+.env.*
+!.env.example
 __pycache__/
 *.pyc
 wanderai.db
+.wrangler/
+node_modules/
+dist/
