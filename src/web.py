@@ -1,0 +1,1959 @@
+from flask import Flask, render_template, request, jsonify
+from google import genai
+from dotenv import load_dotenv
+from admin import admin_bp, ensure_main_admin
+import os
+import time
+import re
+import requests
+import sqlite3
+from urllib.parse import quote_plus
+
+load_dotenv()
+
+app = Flask(__name__)
+
+# Cloudflare Worker secrets are exposed through request.environ["workers.env"],
+# not os.environ. A placeholder keeps module import safe; the real key is
+# applied for each request in configure_worker_environment().
+secret_key = os.getenv("SECRET_KEY")
+app.config["SECRET_KEY"] = secret_key or "configure-SECRET_KEY-in-Cloudflare"
+
+app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 8
+
+app.register_blueprint(admin_bp)
+
+# ==================================================
+# GEMINI API
+# ==================================================
+
+api_key = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key) if api_key else None
+
+@app.before_request
+def configure_worker_environment():
+    """Load Cloudflare Worker secrets from the request environment."""
+    global client, api_key
+    worker_env = request.environ.get("workers.env")
+    if worker_env is None:
+        return
+    runtime_secret = getattr(worker_env, "SECRET_KEY", None)
+    if runtime_secret:
+        app.config["SECRET_KEY"] = runtime_secret
+    runtime_api_key = getattr(worker_env, "GEMINI_API_KEY", None)
+    if runtime_api_key and runtime_api_key != api_key:
+        api_key = runtime_api_key
+        client = genai.Client(api_key=api_key)
+
+MODEL = "gemini-3.5-flash-lite"
+
+MODELS = [
+     "gemini-3-flash-preview",
+    "gemini-3.6-flash",
+    "gemma-4-26b-a4b-it"
+]
+
+
+# ==================================================
+# GOOGLE MAPS SEARCH LINK
+# ==================================================
+
+def google_maps_link(place, destination):
+    query = f"{place}, {destination}"
+    encoded_query = quote_plus(query)
+
+    return (
+        "https://www.google.com/maps/search/?api=1&query="
+        + encoded_query
+    )
+
+
+# ==================================================
+# GOOGLE MAPS LINKS
+# ==================================================
+
+def add_google_maps_links(itinerary, destination):
+
+    # Clean escaped characters
+    itinerary = itinerary.replace("\\#", "#")
+    itinerary = itinerary.replace("\\*", "*")
+
+    # Force location markers onto separate lines
+    itinerary = re.sub(
+        r"\s+(PLACE:)",
+        r"\n\1",
+        itinerary,
+        flags=re.IGNORECASE
+    )
+
+    itinerary = re.sub(
+        r"\s+(RESTAURANT:)",
+        r"\n\1",
+        itinerary,
+        flags=re.IGNORECASE
+    )
+
+    itinerary = re.sub(
+        r"\s+(HOTEL:)",
+        r"\n\1",
+        itinerary,
+        flags=re.IGNORECASE
+    )
+
+    lines = itinerary.splitlines()
+    output = []
+
+    for line in lines:
+
+        stripped = line.strip()
+
+        match = re.match(
+            r"^(PLACE|RESTAURANT|HOTEL):\s*(.+)$",
+            stripped,
+            flags=re.IGNORECASE
+        )
+
+        # Normal line
+        if not match:
+            output.append(line)
+            continue
+
+        kind = match.group(1).upper()
+        place = match.group(2).strip()
+
+        # Remove Markdown bold
+        place = re.sub(r"\*\*", "", place)
+
+        # Remove brackets
+        place = place.strip("[]()")
+
+        # Ignore empty values
+        if not place:
+            output.append(line)
+            continue
+
+        # Ignore placeholders
+        if place.lower() in [
+            "none",
+            "n/a",
+            "not available",
+            "unknown",
+            "a suitable hotel",
+            "a specific restaurant"
+        ]:
+            output.append(line)
+            continue
+
+        # Create Maps URL
+        maps_url = google_maps_link(
+            place,
+            destination
+        )
+
+        # Keep original line
+        output.append(line)
+
+        # Create button
+        if kind == "PLACE":
+            button_text = (
+                f"📍 Open {place} in Google Maps"
+            )
+
+        elif kind == "RESTAURANT":
+            button_text = (
+                f"🍜 Find {place} on Google Maps"
+            )
+
+        else:
+            button_text = (
+                f"🏨 Find {place} on Google Maps"
+            )
+
+        output.append(
+            f'<a href="{maps_url}" '
+            f'target="_blank" '
+            f'rel="noopener noreferrer" '
+            f'class="maps-link">'
+            f'{button_text}'
+            f'</a>'
+        )
+
+    return "\n".join(output)
+
+
+# ==================================================
+# WEATHER
+# ==================================================
+
+def get_weather(destination):
+
+    try:
+
+        # ------------------------------------------
+        # STEP 1: GEOCODING
+        # ------------------------------------------
+
+        geocode_url = (
+            "https://geocoding-api.open-meteo.com/v1/search"
+        )
+
+        geocode_response = requests.get(
+            geocode_url,
+            params={
+                "name": destination,
+                "count": 1,
+                "language": "en",
+                "format": "json"
+            },
+            timeout=10
+        )
+
+        geocode_response.raise_for_status()
+
+        geocode_data = geocode_response.json()
+
+        if not geocode_data.get("results"):
+            return None
+
+        location = geocode_data["results"][0]
+
+        latitude = location["latitude"]
+        longitude = location["longitude"]
+
+        city_name = location.get(
+            "name",
+            destination
+        )
+
+        country = location.get(
+            "country",
+            ""
+        )
+
+        # ------------------------------------------
+        # STEP 2: WEATHER FORECAST
+        # ------------------------------------------
+
+        weather_url = (
+            "https://api.open-meteo.com/v1/forecast"
+        )
+
+        weather_response = requests.get(
+            weather_url,
+            params={
+                "latitude": latitude,
+                "longitude": longitude,
+                "current": (
+                    "temperature_2m,"
+                    "apparent_temperature,"
+                    "weather_code,"
+                    "wind_speed_10m"
+                ),
+                "daily": (
+                    "weather_code,"
+                    "temperature_2m_max,"
+                    "temperature_2m_min"
+                ),
+                "forecast_days": 7,
+                "timezone": "auto"
+            },
+            timeout=10
+        )
+
+        weather_response.raise_for_status()
+
+        weather_data = weather_response.json()
+
+        current = weather_data.get(
+            "current",
+            {}
+        )
+
+        daily = weather_data.get(
+            "daily",
+            {}
+        )
+
+        # ------------------------------------------
+        # WEATHER DESCRIPTIONS
+        # ------------------------------------------
+
+        weather_codes = {
+            0: "Clear sky",
+            1: "Mainly clear",
+            2: "Partly cloudy",
+            3: "Overcast",
+            45: "Fog",
+            48: "Depositing rime fog",
+            51: "Light drizzle",
+            53: "Moderate drizzle",
+            55: "Dense drizzle",
+            61: "Slight rain",
+            63: "Moderate rain",
+            65: "Heavy rain",
+            71: "Slight snow",
+            73: "Moderate snow",
+            75: "Heavy snow",
+            80: "Slight rain showers",
+            81: "Moderate rain showers",
+            82: "Violent rain showers",
+            95: "Thunderstorm",
+            96: "Thunderstorm with hail",
+            99: "Thunderstorm with heavy hail"
+        }
+
+        # ------------------------------------------
+        # WEATHER ICONS
+        # ------------------------------------------
+
+        weather_icons = {
+            0: "☀️",
+            1: "🌤️",
+            2: "⛅",
+            3: "☁️",
+            45: "🌫️",
+            48: "🌫️",
+            51: "🌦️",
+            53: "🌦️",
+            55: "🌧️",
+            61: "🌧️",
+            63: "🌧️",
+            65: "🌧️",
+            71: "🌨️",
+            73: "❄️",
+            75: "❄️",
+            80: "🌦️",
+            81: "🌧️",
+            82: "⛈️",
+            95: "⛈️",
+            96: "⛈️",
+            99: "⛈️"
+        }
+
+        # ------------------------------------------
+        # 7-DAY FORECAST
+        # ------------------------------------------
+
+        forecast = []
+
+        dates = daily.get(
+            "time",
+            []
+        )
+
+        codes = daily.get(
+            "weather_code",
+            []
+        )
+
+        max_temps = daily.get(
+            "temperature_2m_max",
+            []
+        )
+
+        min_temps = daily.get(
+            "temperature_2m_min",
+            []
+        )
+
+        forecast_count = min(
+            len(dates),
+            len(codes),
+            len(max_temps),
+            len(min_temps),
+            7
+        )
+
+        for i in range(forecast_count):
+
+            code = codes[i]
+
+            forecast.append({
+                "date": dates[i],
+                "icon": weather_icons.get(
+                    code,
+                    "🌤️"
+                ),
+                "description": weather_codes.get(
+                    code,
+                    "Unknown"
+                ),
+                "max": round(
+                    max_temps[i]
+                ),
+                "min": round(
+                    min_temps[i]
+                )
+            })
+
+        # ------------------------------------------
+        # CURRENT WEATHER
+        # ------------------------------------------
+
+        current_code = current.get(
+            "weather_code",
+            0
+        )
+
+        return {
+            "city": city_name,
+            "country": country,
+
+            "temperature": round(
+                current.get(
+                    "temperature_2m",
+                    0
+                )
+            ),
+
+            "feels_like": round(
+                current.get(
+                    "apparent_temperature",
+                    0
+                )
+            ),
+
+            "wind_speed": round(
+                current.get(
+                    "wind_speed_10m",
+                    0
+                )
+            ),
+
+            "weather_code": current_code,
+
+            "description": weather_codes.get(
+                current_code,
+                "Unknown"
+            ),
+
+            "icon": weather_icons.get(
+                current_code,
+                "🌤️"
+            ),
+
+            "forecast": forecast
+        }
+
+    except Exception as e:
+
+        print(
+            f"⚠️ Weather error: {e}"
+        )
+
+        return None
+
+
+# ==================================================
+# CURRENCY CONVERSION
+# ==================================================
+
+# Every supported currency: code -> (symbol, name)
+
+CURRENCIES = {
+    "USD": ("$", "US Dollar"),
+    "EUR": ("\u20ac", "Euro"),
+    "GBP": ("\u00a3", "British Pound"),
+    "JPY": ("\u00a5", "Japanese Yen"),
+    "INR": ("\u20b9", "Indian Rupee"),
+    "AUD": ("A$", "Australian Dollar"),
+    "CAD": ("C$", "Canadian Dollar"),
+    "CHF": ("CHF", "Swiss Franc"),
+    "CNY": ("\u00a5", "Chinese Yuan"),
+    "HKD": ("HK$", "Hong Kong Dollar"),
+    "SGD": ("S$", "Singapore Dollar"),
+    "TWD": ("NT$", "New Taiwan Dollar"),
+    "KRW": ("\u20a9", "South Korean Won"),
+    "NZD": ("NZ$", "New Zealand Dollar"),
+    "MXN": ("MX$", "Mexican Peso"),
+    "BRL": ("R$", "Brazilian Real"),
+    "ARS": ("AR$", "Argentine Peso"),
+    "CLP": ("CLP$", "Chilean Peso"),
+    "COP": ("CO$", "Colombian Peso"),
+    "PEN": ("S/", "Peruvian Sol"),
+    "UYU": ("UY$", "Uruguayan Peso"),
+    "ZAR": ("R", "South African Rand"),
+    "EGP": ("E\u00a3", "Egyptian Pound"),
+    "NGN": ("\u20a6", "Nigerian Naira"),
+    "KES": ("KSh", "Kenyan Shilling"),
+    "MAD": ("MAD", "Moroccan Dirham"),
+    "TND": ("DT", "Tunisian Dinar"),
+    "AED": ("AED", "UAE Dirham"),
+    "SAR": ("SAR", "Saudi Riyal"),
+    "QAR": ("QAR", "Qatari Riyal"),
+    "KWD": ("KD", "Kuwaiti Dinar"),
+    "BHD": ("BD", "Bahraini Dinar"),
+    "OMR": ("OMR", "Omani Rial"),
+    "JOD": ("JD", "Jordanian Dinar"),
+    "ILS": ("\u20aa", "Israeli Shekel"),
+    "TRY": ("\u20ba", "Turkish Lira"),
+    "RUB": ("\u20bd", "Russian Ruble"),
+    "UAH": ("\u20b4", "Ukrainian Hryvnia"),
+    "PLN": ("z\u0142", "Polish Zloty"),
+    "CZK": ("K\u010d", "Czech Koruna"),
+    "HUF": ("Ft", "Hungarian Forint"),
+    "RON": ("lei", "Romanian Leu"),
+    "BGN": ("\u043b\u0432", "Bulgarian Lev"),
+    "HRK": ("kn", "Croatian Kuna"),
+    "RSD": ("\u0434\u0438\u043d", "Serbian Dinar"),
+    "SEK": ("kr", "Swedish Krona"),
+    "NOK": ("kr", "Norwegian Krone"),
+    "DKK": ("kr", "Danish Krone"),
+    "ISK": ("kr", "Icelandic Krona"),
+    "THB": ("\u0e3f", "Thai Baht"),
+    "VND": ("\u20ab", "Vietnamese Dong"),
+    "IDR": ("Rp", "Indonesian Rupiah"),
+    "MYR": ("RM", "Malaysian Ringgit"),
+    "PHP": ("\u20b1", "Philippine Peso"),
+    "LAK": ("\u20ad", "Laotian Kip"),
+    "KHR": ("\u17db", "Cambodian Riel"),
+    "MMK": ("K", "Myanmar Kyat"),
+    "BDT": ("\u09f3", "Bangladeshi Taka"),
+    "LKR": ("Rs", "Sri Lankan Rupee"),
+    "NPR": ("\u20a8", "Nepalese Rupee"),
+    "PKR": ("\u20a8", "Pakistani Rupee"),
+    "AFN": ("\u060b", "Afghan Afghani"),
+    "IRR": ("\ufdfc", "Iranian Rial"),
+    "IQD": ("\u062f\u0639", "Iraqi Dinar"),
+    "GHS": ("\u20b5", "Ghanaian Cedi"),
+    "TZS": ("TSh", "Tanzanian Shilling"),
+    "UGX": ("USh", "Ugandan Shilling"),
+    "ETB": ("Br", "Ethiopian Birr"),
+    "CRC": ("\u20a1", "Costa Rican Colon"),
+    "DOP": ("RD$", "Dominican Peso"),
+    "JMD": ("J$", "Jamaican Dollar"),
+    "TTD": ("TT$", "Trinidad Dollar"),
+    "BBD": ("Bds$", "Barbadian Dollar"),
+    "BOB": ("Bs", "Bolivian Boliviano"),
+    "PYG": ("\u20b2", "Paraguayan Guarani"),
+    "VES": ("Bs.S", "Venezuelan Bolivar"),
+    "GTQ": ("Q", "Guatemalan Quetzal"),
+    "HNL": ("L", "Honduran Lempira"),
+    "NIO": ("C$", "Nicaraguan Cordoba"),
+    "PAB": ("B/.", "Panamanian Balboa"),
+    "CUP": ("$", "Cuban Peso"),
+    "XAF": ("FCFA", "Central African CFA Franc"),
+    "XOF": ("CFA", "West African CFA Franc"),
+}
+
+
+# Destination country hints used when the user
+# keeps the "Auto" currency option
+
+DESTINATION_CURRENCY_HINTS = {
+    "india": "INR",
+    "japan": "JPY",
+    "united states": "USD",
+    "usa": "USD",
+    "united kingdom": "GBP",
+    "uk": "GBP",
+    "england": "GBP",
+    "scotland": "GBP",
+    "france": "EUR",
+    "germany": "EUR",
+    "italy": "EUR",
+    "spain": "EUR",
+    "portugal": "EUR",
+    "greece": "EUR",
+    "ireland": "EUR",
+    "austria": "EUR",
+    "belgium": "EUR",
+    "netherlands": "EUR",
+    "finland": "EUR",
+    "luxembourg": "EUR",
+    "switzerland": "CHF",
+    "canada": "CAD",
+    "australia": "AUD",
+    "new zealand": "NZD",
+    "singapore": "SGD",
+    "thailand": "THB",
+    "philippines": "PHP",
+    "indonesia": "IDR",
+    "vietnam": "VND",
+    "malaysia": "MYR",
+    "south korea": "KRW",
+    "china": "CNY",
+    "hong kong": "HKD",
+    "taiwan": "TWD",
+    "cambodia": "KHR",
+    "laos": "LAK",
+    "myanmar": "MMK",
+    "maldives": "MVR",
+    "united arab emirates": "AED",
+    "dubai": "AED",
+    "abu dhabi": "AED",
+    "saudi arabia": "SAR",
+    "qatar": "QAR",
+    "kuwait": "KWD",
+    "bahrain": "BHD",
+    "oman": "OMR",
+    "jordan": "JOD",
+    "israel": "ILS",
+    "turkey": "TRY",
+    "russia": "RUB",
+    "ukraine": "UAH",
+    "poland": "PLN",
+    "czech republic": "CZK",
+    "czechia": "CZK",
+    "hungary": "HUF",
+    "romania": "RON",
+    "bulgaria": "BGN",
+    "croatia": "HRK",
+    "serbia": "RSD",
+    "sweden": "SEK",
+    "norway": "NOK",
+    "denmark": "DKK",
+    "iceland": "ISK",
+    "south africa": "ZAR",
+    "egypt": "EGP",
+    "morocco": "MAD",
+    "tunisia": "TND",
+    "nigeria": "NGN",
+    "kenya": "KES",
+    "ghana": "GHS",
+    "tanzania": "TZS",
+    "uganda": "UGX",
+    "ethiopia": "ETB",
+    "iraq": "IQD",
+    "iran": "IRR",
+    "afghanistan": "AFN",
+    "pakistan": "PKR",
+    "bangladesh": "BDT",
+    "nepal": "NPR",
+    "sri lanka": "LKR",
+    "mexico": "MXN",
+    "brazil": "BRL",
+    "argentina": "ARS",
+    "chile": "CLP",
+    "colombia": "COP",
+    "peru": "PEN",
+    "uruguay": "UYU",
+    "bolivia": "BOB",
+    "paraguay": "PYG",
+    "venezuela": "VES",
+    "costa rica": "CRC",
+    "dominican republic": "DOP",
+    "jamaica": "JMD",
+    "trinidad and tobago": "TTD",
+    "barbados": "BBD",
+    "cuba": "CUP",
+    "guatemala": "GTQ",
+    "honduras": "HNL",
+    "nicaragua": "NIO",
+    "panama": "PAB",
+    "senegal": "XOF",
+    "cameroon": "XAF",
+    "cote d'ivoire": "XOF",
+    "ivory coast": "XOF"
+}
+
+
+def detect_destination_currency(destination):
+
+    destination_lower = destination.lower()
+
+    # Longest hint first so "united kingdom"
+    # is not shadowed by "uk"
+
+    for hint in sorted(
+        DESTINATION_CURRENCY_HINTS,
+        key=len,
+        reverse=True
+    ):
+
+        if hint in destination_lower:
+
+            return DESTINATION_CURRENCY_HINTS[hint]
+
+    return None
+
+
+def get_exchange_rate(from_currency, to_currency):
+
+    # Frankfurter uses lowercase codes
+
+    url = (
+        "https://api.frankfurter.dev/v2/rate/"
+        f"{from_currency.lower()}/"
+        f"{to_currency.lower()}"
+    )
+
+    response = requests.get(
+        url,
+        timeout=10
+    )
+
+    response.raise_for_status()
+
+    data = response.json()
+
+    return float(data["rate"])
+
+
+def get_currency_info(
+    destination,
+    budget,
+    selected_currency=None
+):
+
+    try:
+
+        base_currency = "USD"
+
+        # --------------------------------------------------
+        # STEP 1: WHICH CURRENCY IS THE BUDGET IN
+        # --------------------------------------------------
+
+        chosen = (
+            (selected_currency or "")
+            .strip()
+            .upper()
+        )
+
+        if chosen in CURRENCIES:
+
+            base_currency = chosen
+
+        else:
+
+            detected = detect_destination_currency(
+                destination
+            )
+
+            if detected:
+
+                base_currency = detected
+
+        base_symbol, base_name = CURRENCIES[base_currency]
+
+        # --------------------------------------------------
+        # STEP 2: WHICH CURRENCY TO SHOW
+        # --------------------------------------------------
+
+        target_currency = detect_destination_currency(
+            destination
+        )
+
+        if not target_currency:
+
+            target_currency = base_currency
+
+        target_symbol, target_name = CURRENCIES[target_currency]
+
+        # --------------------------------------------------
+        # STEP 3: CONVERSION
+        # --------------------------------------------------
+
+        if base_currency == target_currency:
+
+            rate = 1
+
+        else:
+
+            rate = get_exchange_rate(
+                base_currency,
+                target_currency
+            )
+
+        original_amount = round(
+            float(budget),
+            2
+        )
+
+        converted_amount = round(
+            original_amount * rate,
+            2
+        )
+
+        return {
+            "base_currency": base_currency,
+            "base_symbol": base_symbol,
+            "base_name": base_name,
+            "target_currency": target_currency,
+            "target_symbol": target_symbol,
+            "symbol": target_symbol,
+            "currency_name": target_name,
+            "original_amount": original_amount,
+            "converted_amount": converted_amount,
+            "rate": rate,
+            "user_selected": chosen == base_currency
+        }
+
+    except Exception as e:
+
+        print(
+            f"\u26a0\ufe0f Currency conversion error: {e}"
+        )
+
+        return None
+
+
+# ==================================================
+# GENERATE ITINERARY
+# ==================================================
+
+def generate_itinerary(
+    destination,
+    days,
+    budget,
+    interests,
+    travel_style,
+    budget_currency="USD"
+):
+
+    currency_name = CURRENCIES.get(
+        budget_currency,
+        ("", budget_currency)
+    )[1]
+
+    prompt = f"""
+You are WanderAI, a professional AI travel planning assistant.
+
+Create a realistic {days}-day travel itinerary for a real traveler.
+
+TRIP INFORMATION
+----------------
+Destination:
+{destination}
+
+Number of Days:
+{days}
+
+Total Budget:
+{budget_currency} {budget}
+
+Currency Rules:
+- The traveler's budget is in {budget_currency} ({currency_name}).
+- Report every price, cost and estimate in {budget_currency}.
+- Do not convert the budget into another currency.
+- Mention the destination's local currency only
+  as extra information when it helps the traveler.
+
+Traveler Interests:
+{interests}
+
+Travel Style:
+{travel_style}
+
+TRAVEL STYLE GUIDELINES
+-----------------------
+
+If the travel style is Budget:
+- Prioritize affordable accommodation.
+- Prefer public transportation.
+- Recommend free or low-cost attractions.
+- Keep food costs reasonable.
+
+If the travel style is Balanced:
+- Balance comfort, sightseeing, food and cost.
+- Use practical transportation.
+- Recommend good-value accommodation and activities.
+
+If the travel style is Luxury:
+- Prioritize premium accommodation.
+- Recommend high-quality restaurants.
+- Include convenient transportation.
+- Include premium experiences where appropriate.
+- Never exceed the user's total budget.
+
+If the travel style is Adventure:
+- Prioritize outdoor activities.
+- Include nature and adventure experiences.
+- Include active exploration.
+- Keep the schedule realistic.
+
+If the travel style is Family:
+- Recommend family-friendly attractions.
+- Avoid overly difficult activities.
+- Include comfortable transportation.
+- Consider different age groups.
+
+If the travel style is Romantic:
+- Include scenic locations.
+- Recommend romantic experiences.
+- Include good dining options.
+- Keep the schedule relaxed.
+
+IMPORTANT TRAVEL PLANNING RULES
+------------------------------
+1. Create a practical itinerary for a real traveler.
+2. Prioritize the traveler's interests.
+3. Group nearby attractions together.
+4. Avoid unnecessary long-distance travel.
+5. Do not overcrowd the schedule.
+6. Include realistic travel times.
+7. Recommend appropriate local transportation.
+8. Include approximate prices.
+9. Mention local currency when useful.
+10. Keep the total estimated cost within the user's budget.
+11. Include accommodation estimates.
+12. Include food estimates.
+13. Include transportation estimates.
+14. Include attraction/activity estimates.
+15. Calculate the approximate total cost.
+16. Calculate the remaining budget.
+17. Recommend real tourist attractions and commonly known places.
+18. Do not invent impossible attractions.
+19. Do not output JSON.
+20. Do not output programming code.
+21. Do not output technical information.
+22. Do not discuss how you generated the itinerary.
+
+HOTEL AND RESTAURANT RULES
+--------------------------
+For each day:
+
+- Recommend 1 suitable hotel/accommodation option.
+- Recommend 1 specific restaurant or food location.
+- Use real, recognizable places whenever possible.
+- Match recommendations to the destination, budget,
+  travel style, and interests.
+- Do not invent addresses, phone numbers, prices,
+  ratings, or URLs.
+
+Use exactly this format:
+
+Accommodation:
+HOTEL: [specific real hotel name]
+Description: [short reason why it suits the traveler]
+
+Food:
+RESTAURANT: [specific real restaurant name]
+Description: [recommended food or reason to visit]
+
+REQUIRED FORMAT
+---------------
+
+# Trip Overview
+
+Destination:
+Duration:
+Budget:
+Travel Style:
+Interests:
+
+# Day 1
+
+Morning:
+PLACE: [specific real attraction]
+Description: [what to do]
+
+Afternoon:
+PLACE: [specific real attraction]
+Description: [what to do]
+
+Evening:
+PLACE: [specific real attraction]
+Description: [what to do]
+
+Accommodation:
+HOTEL: [specific real hotel name]
+Description: [short reason why it suits the traveler]
+
+Food:
+RESTAURANT: [specific real restaurant name]
+Description: [food recommendation]
+
+Transportation:
+[transportation information]
+
+Estimated Cost:
+[cost]
+
+# Day 2
+
+Morning:
+PLACE: [specific real attraction]
+Description: [what to do]
+
+Afternoon:
+PLACE: [specific real attraction]
+Description: [what to do]
+
+Evening:
+PLACE: [specific real attraction]
+Description: [what to do]
+
+Accommodation:
+HOTEL: [specific real hotel name]
+Description: [short reason why it suits the traveler]
+
+Food:
+RESTAURANT: [specific real restaurant name]
+Description: [food recommendation]
+
+Transportation:
+[transportation information]
+
+Estimated Cost:
+[cost]
+
+Continue this format for every day.
+
+# Budget Breakdown
+
+Accommodation:
+Food:
+Transportation:
+Activities:
+Other:
+Total Estimated Cost:
+Remaining Budget:
+
+# Food Recommendations
+
+RESTAURANT: [specific real restaurant or food location]
+Description: [recommendation]
+
+# Transportation
+
+Explain the best ways to move around the destination.
+
+# Practical Travel Tips
+
+Provide useful tips about safety, local transport, timing, money,
+weather, etiquette, and important travel considerations.
+
+IMPORTANT OUTPUT RULES
+----------------------
+- Do NOT create Markdown links.
+- Do NOT create Google Maps URLs.
+- Do NOT write links such as [Place Name](URL).
+- Do NOT include Google Maps URLs in your response.
+- Only provide the PLACE name.
+- Only provide the RESTAURANT name.
+- Only provide the HOTEL name.
+- Keep every PLACE entry on its own separate line.
+- Keep every RESTAURANT entry on its own separate line.
+- Keep every HOTEL entry on its own separate line.
+- Keep all headings on separate lines.
+- The WanderAI website will automatically create Google Maps buttons.
+"""
+
+    # --------------------------------------------------
+    # GEMINI FALLBACK SYSTEM
+    # --------------------------------------------------
+
+    # Primary model first, then reliable fallback.
+    models_to_try = [
+        "gemini-3-flash-preview",
+        "gemma-4-26b-a4b-it",
+    ]
+
+    for model in models_to_try:
+
+        print(f"\n🤖 Trying model: {model}")
+
+        try:
+
+            print("Attempt 1/1")
+
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt
+            )
+
+            if response and response.text:
+
+                print(f"✅ Success with {model}")
+
+                return response.text
+
+            print(f"⚠️ {model} returned an empty response.")
+
+        except Exception as e:
+
+            error = str(e)
+
+            print(f"❌ {model} error: {error}")
+
+            # Move immediately to the next model.
+            # Do NOT wait and retry the same model.
+            if (
+                "503" in error
+                or "UNAVAILABLE" in error
+                or "high demand" in error.lower()
+                or "429" in error
+                or "RESOURCE_EXHAUSTED" in error
+                or "404" in error
+                or "NOT_FOUND" in error
+                or "500" in error
+                or "INTERNAL" in error
+            ):
+                print(
+                    f"⚠️ Moving to fallback model..."
+                )
+                continue
+
+            # Any other Gemini error also moves to fallback.
+            print(
+                "⚠️ Unexpected Gemini error. "
+                "Moving to fallback model..."
+            )
+            continue
+
+    # --------------------------------------------------
+    # FINAL FALLBACK
+    # --------------------------------------------------
+
+    return """
+# AI Service Temporarily Busy
+
+WanderAI could not generate the itinerary at this moment.
+
+Your travel request was received, but the AI service is temporarily
+unavailable.
+
+Please try Plan My Trip again in a short while.
+"""
+
+
+# ==================================================
+# FORMAT ITINERARY
+# ==================================================
+
+def format_itinerary(itinerary):
+
+    # Fix escaped characters
+    itinerary = itinerary.replace("\\#", "#")
+    itinerary = itinerary.replace("\\*", "*")
+
+    # Convert Markdown links to HTML
+    markdown_link_pattern = (
+        r'\[([^\]]+)\]\((https?://[^)]+)\)'
+    )
+
+    def convert_markdown_link(match):
+
+        text = match.group(1).replace(
+            "**",
+            ""
+        )
+
+        url = match.group(2)
+
+        return (
+            f'<a href="{url}" '
+            f'target="_blank" '
+            f'rel="noopener noreferrer" '
+            f'class="maps-link">'
+            f'{text}'
+            f'</a>'
+        )
+
+    itinerary = re.sub(
+        markdown_link_pattern,
+        convert_markdown_link,
+        itinerary
+    )
+
+    # Major headings
+    major_headings = [
+        "Trip Overview",
+        "Budget Breakdown",
+        "Food Recommendations",
+        "Transportation",
+        "Practical Travel Tips"
+    ]
+
+    for heading in major_headings:
+
+        itinerary = re.sub(
+            rf'\s+(#\s*{re.escape(heading)})',
+            r'\n\1',
+            itinerary,
+            flags=re.IGNORECASE
+        )
+
+    # Day headings
+    itinerary = re.sub(
+        r'\s+(#\s*Day\s+\d+)',
+        r'\n\1',
+        itinerary,
+        flags=re.IGNORECASE
+    )
+
+    # Common sections
+    sections = [
+        "Morning:",
+        "Afternoon:",
+        "Evening:",
+        "Food:",
+        "Transportation:",
+        "Estimated Cost:",
+        "Description:",
+        "Accommodation:",
+        "HOTEL:",
+        "Activities:",
+        "Other:",
+        "Total Estimated Cost:",
+        "Remaining Budget:",
+        "PLACE:",
+        "RESTAURANT:"
+    ]
+
+    for section in sections:
+
+        itinerary = re.sub(
+            rf'\s+({re.escape(section)})',
+            r'\n\1',
+            itinerary,
+            flags=re.IGNORECASE
+        )
+
+    lines = itinerary.splitlines()
+
+    html = []
+
+    day_open = False
+    overview_open = False
+
+    for line in lines:
+
+        line = line.strip()
+
+        if not line:
+            continue
+
+        line = line.replace(
+            "\\#",
+            "#"
+        )
+
+        # ------------------------------------------
+        # DAY HEADING
+        # ------------------------------------------
+
+        if re.match(
+            r"^#\s*Day\s+\d+",
+            line,
+            re.IGNORECASE
+        ):
+
+            if day_open:
+                html.append("</div>")
+                day_open = False
+
+            if overview_open:
+                html.append("</div>")
+                overview_open = False
+
+            day_title = re.sub(
+                r"^#\s*",
+                "",
+                line
+            )
+
+            html.append(
+                '<div class="day-card">'
+                f'<div class="day-title">{day_title}</div>'
+            )
+
+            day_open = True
+
+        # ------------------------------------------
+        # TRIP OVERVIEW
+        # ------------------------------------------
+
+        elif line.lower().startswith(
+            "# trip overview"
+        ):
+
+            if day_open:
+                html.append("</div>")
+                day_open = False
+
+            if overview_open:
+                html.append("</div>")
+
+            html.append(
+                '<div class="overview-section">'
+                '<div class="overview-title">'
+                '🧭 Trip Overview'
+                '</div>'
+            )
+
+            overview_open = True
+
+        # ------------------------------------------
+        # OTHER MAJOR HEADINGS
+        # ------------------------------------------
+
+        elif line.startswith("#"):
+
+            if day_open:
+                html.append("</div>")
+                day_open = False
+
+            if overview_open:
+                html.append("</div>")
+                overview_open = False
+
+            title = line.lstrip("#").strip()
+
+            html.append(
+                '<div class="overview-section">'
+                '<div class="overview-title">'
+                f'{title}'
+                '</div>'
+            )
+
+            overview_open = True
+
+        # ------------------------------------------
+        # GOOGLE MAPS LINK
+        # ------------------------------------------
+
+        elif (
+            line.startswith("<a ")
+            and "maps-link" in line
+        ):
+
+            html.append(line)
+
+        # ------------------------------------------
+        # PLACE / HOTEL / RESTAURANT
+        # ------------------------------------------
+
+        elif re.match(
+            r"^(PLACE|HOTEL|RESTAURANT):",
+            line,
+            re.IGNORECASE
+        ):
+
+            marker_match = re.match(
+                r"^(PLACE|HOTEL|RESTAURANT):\s*(.*)$",
+                line,
+                re.IGNORECASE
+            )
+
+            if not marker_match:
+                html.append(
+                    '<div class="normal-text">'
+                    f'{line}'
+                    '</div>'
+                )
+                continue
+
+            marker = marker_match.group(1).upper()
+            value = marker_match.group(2).strip()
+
+            value = re.sub(
+                r"\*\*",
+                "",
+                value
+            )
+
+            if marker == "PLACE":
+                icon = "📍"
+
+            elif marker == "HOTEL":
+                icon = "🏨"
+
+            else:
+                icon = "🍜"
+
+            html.append(
+                '<div class="location-name">'
+                f'{icon} {value}'
+                '</div>'
+            )
+
+        # ------------------------------------------
+        # SECTION HEADINGS
+        # ------------------------------------------
+
+        elif (
+            line.endswith(":")
+            and len(line) < 40
+        ):
+
+            section = line[:-1].strip()
+
+            icons = {
+                "Morning": "🌅",
+                "Afternoon": "☀️",
+                "Evening": "🌆",
+                "Food": "🍜",
+                "Transportation": "🚆",
+                "Estimated Cost": "💰",
+                "Description": "📝",
+                "Accommodation": "🏨",
+                "Activities": "🎟️",
+                "Other": "📦",
+                "Total Estimated Cost": "💰",
+                "Remaining Budget": "💵"
+            }
+
+            icon = icons.get(
+                section,
+                "📌"
+            )
+
+            html.append(
+                '<div class="sub-heading">'
+                f'{icon} {section}'
+                '</div>'
+            )
+
+        # ------------------------------------------
+        # BULLET POINTS
+        # ------------------------------------------
+
+        elif (
+            line.startswith("* ")
+            or line.startswith("- ")
+        ):
+
+            text = line[2:]
+
+            text = text.replace(
+                "**",
+                ""
+            )
+
+            html.append(
+                '<div class="bullet-item">'
+                f'• {text}'
+                '</div>'
+            )
+
+        # ------------------------------------------
+        # NORMAL TEXT
+        # ------------------------------------------
+
+        else:
+
+            text = line
+
+            text = text.replace(
+                "**",
+                ""
+            )
+
+            text = text.replace(
+                "*",
+                ""
+            )
+
+            html.append(
+                '<div class="normal-text">'
+                f'{text}'
+                '</div>'
+            )
+
+    # Close day
+    if day_open:
+        html.append("</div>")
+
+    # Close overview
+    if overview_open:
+        html.append("</div>")
+
+    return "\n".join(html)
+
+
+# ==================================================
+# TRIP HISTORY DATABASE
+# ==================================================
+
+DATABASE = "wanderai.db"
+
+
+def init_database():
+
+    connection = sqlite3.connect(
+        DATABASE
+    )
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS trips (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            destination TEXT NOT NULL,
+            days INTEGER,
+            budget REAL,
+            interests TEXT,
+            travel_style TEXT,
+            itinerary TEXT,
+            created_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    connection.commit()
+    connection.close()
+
+
+def save_trip(
+    destination,
+    days,
+    budget,
+    interests,
+    travel_style,
+    itinerary
+):
+
+    connection = sqlite3.connect(
+        DATABASE
+    )
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        INSERT INTO trips
+        (
+            destination,
+            days,
+            budget,
+            interests,
+            travel_style,
+            itinerary
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            destination,
+            days,
+            budget,
+            interests,
+            travel_style,
+            itinerary
+        )
+    )
+
+    connection.commit()
+    connection.close()
+
+
+def get_trip_history():
+
+    connection = sqlite3.connect(
+        DATABASE
+    )
+
+    connection.row_factory = sqlite3.Row
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT *
+        FROM trips
+        ORDER BY created_at DESC
+        """
+    )
+
+    trips = cursor.fetchall()
+
+    connection.close()
+
+    return trips
+
+
+# Local development initializes SQLite. Cloudflare Worker requests use
+# request-scoped bindings; avoid failing Worker startup on a local filesystem DB.
+if os.getenv("CLOUDFLARE_WORKERS") != "1":
+    try:
+        init_database()
+        ensure_main_admin()
+    except Exception as database_error:
+        print(f"Database initialization deferred: {database_error}")
+
+
+# ==================================================
+# HOME PAGE
+# ==================================================
+
+@app.route(
+    "/",
+    methods=["GET"]
+)
+def index():
+
+    return render_template(
+        "index.html",
+        currencies=CURRENCIES
+    )
+
+
+# ==================================================
+# CHAT
+# ==================================================
+
+@app.route(
+    "/chat",
+    methods=["POST"]
+)
+def chat():
+
+    data = request.get_json()
+
+    if not data:
+        data = {}
+
+    message = data.get(
+        "message",
+        ""
+    ).strip()
+
+    if not message:
+
+        return jsonify({
+            "reply": "Please enter a message."
+        })
+
+    try:
+
+        response = client.models.generate_content(
+            model=MODEL,
+            contents=f"""
+You are WanderAI, an AI travel assistant.
+
+Help the user with:
+- Travel planning
+- Destinations
+- Places to visit
+- Food
+- Hotels
+- Transportation
+- Budget planning
+- Packing
+- Travel tips
+- Weather-related travel suggestions
+
+Give simple, useful and concise answers.
+
+User message:
+{message}
+"""
+        )
+
+        return jsonify({
+            "reply": response.text
+        })
+
+    except Exception as e:
+
+        print(
+            f"Chat error: {e}"
+        )
+
+        return jsonify({
+            "reply": "Sorry, I couldn't process your request right now."
+        })
+
+
+# ==================================================
+# OTHER PAGES
+# ==================================================
+
+@app.route("/chatbot")
+def chatbot():
+
+    return render_template(
+        "chatbot.html"
+    )
+
+
+@app.route("/booking")
+def booking():
+
+    return render_template(
+        "booking.html"
+    )
+
+
+@app.route("/login")
+def login():
+
+    return render_template(
+        "login.html"
+    )
+
+
+@app.route("/signup")
+def signup():
+
+    return render_template(
+        "signup.html"
+    )
+
+
+# ==================================================
+# TRIP HISTORY PAGE
+# ==================================================
+
+@app.route(
+    "/history"
+)
+def history():
+
+    trips = get_trip_history()
+
+    return render_template(
+        "history.html",
+        trips=trips
+    )
+
+
+# ==================================================
+# VIEW SAVED TRIP
+# ==================================================
+
+@app.route(
+    "/history/<int:trip_id>"
+)
+def view_trip(trip_id):
+
+    connection = sqlite3.connect(
+        DATABASE
+    )
+
+    connection.row_factory = sqlite3.Row
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT *
+        FROM trips
+        WHERE id = ?
+        """,
+        (trip_id,)
+    )
+
+    trip = cursor.fetchone()
+
+    connection.close()
+
+    if not trip:
+        return "Trip not found", 404
+
+    return render_template(
+        "result.html",
+        destination=trip["destination"],
+        from_location="",
+        days=trip["days"],
+        budget=trip["budget"],
+        interests=trip["interests"],
+        travel_style=trip["travel_style"],
+        itinerary=trip["itinerary"],
+        weather=None,
+        currency=None
+    )
+
+
+# ==================================================
+# PLAN TRIP
+# ==================================================
+
+@app.route(
+    "/plan",
+    methods=["POST"]
+)
+def plan():
+
+    # ----------------------------------------------
+    # DESTINATION
+    # ----------------------------------------------
+
+    destination = request.form.get(
+        "destination",
+        "Tokyo, Japan"
+    ).strip()
+
+    if not destination:
+        destination = "Tokyo, Japan"
+
+    # ----------------------------------------------
+    # FROM LOCATION
+    # ----------------------------------------------
+
+    from_location = request.form.get(
+        "from_location",
+        ""
+    ).strip()
+
+    # ----------------------------------------------
+    # DAYS
+    # ----------------------------------------------
+
+    days_value = request.form.get(
+        "days",
+        "7"
+    ).strip()
+
+    try:
+
+        days = int(days_value)
+
+        if days < 1:
+            days = 1
+
+        if days > 30:
+            days = 30
+
+    except (ValueError, TypeError):
+
+        days = 7
+
+    # ----------------------------------------------
+    # BUDGET
+    # ----------------------------------------------
+
+    budget_value = request.form.get(
+        "budget",
+        "3000"
+    ).strip()
+
+    try:
+
+        budget = float(
+            budget_value
+        )
+
+        if budget <= 0:
+            budget = 3000.0
+
+    except (ValueError, TypeError):
+
+        budget = 3000.0
+
+    # ----------------------------------------------
+    # INTERESTS
+    # ----------------------------------------------
+
+    interests = request.form.get(
+        "interests",
+        "food, culture, history"
+    ).strip()
+
+    if not interests:
+        interests = "food, culture, history"
+
+    # ----------------------------------------------
+    # TRAVEL STYLE
+    # ----------------------------------------------
+
+    travel_style = request.form.get(
+        "travel_style",
+        "Balanced"
+    ).strip()
+
+    if not travel_style:
+        travel_style = "Balanced"
+
+    # ----------------------------------------------
+    # BUDGET CURRENCY
+    # ----------------------------------------------
+
+    budget_currency = request.form.get(
+        "budget_currency",
+        ""
+    ).strip().upper()
+
+    if budget_currency not in CURRENCIES:
+
+        budget_currency = (
+            detect_destination_currency(destination)
+            or "USD"
+        )
+
+    # ----------------------------------------------
+    # GENERATE ITINERARY
+    # ----------------------------------------------
+
+    itinerary = generate_itinerary(
+        destination,
+        days,
+        budget,
+        interests,
+        travel_style,
+        budget_currency
+    )
+
+    # ----------------------------------------------
+    # REAL WEATHER
+    # ----------------------------------------------
+
+    weather = get_weather(
+        destination
+    )
+
+    # ----------------------------------------------
+    # CURRENCY CONVERSION
+    # ----------------------------------------------
+
+    currency = get_currency_info(
+        destination,
+        budget,
+        budget_currency
+    )
+
+    # ----------------------------------------------
+    # GOOGLE MAPS LINKS
+    # ----------------------------------------------
+
+    itinerary_with_maps = add_google_maps_links(
+        itinerary,
+        destination
+    )
+
+    # ----------------------------------------------
+    # FORMAT ITINERARY
+    # ----------------------------------------------
+
+    itinerary_with_maps = format_itinerary(
+        itinerary_with_maps
+    )
+
+    # ----------------------------------------------
+    # SAVE TRIP
+    # ----------------------------------------------
+
+    save_trip(
+        destination,
+        days,
+        budget,
+        interests,
+        travel_style,
+        itinerary_with_maps
+    )
+
+    # ----------------------------------------------
+    # SHOW RESULT
+    # ----------------------------------------------
+
+    return render_template(
+        "result.html",
+        destination=destination,
+        from_location=from_location,
+        days=days,
+        budget=budget,
+        interests=interests,
+        travel_style=travel_style,
+        itinerary=itinerary_with_maps,
+        weather=weather,
+        currency=currency
+    )
+
+
+# ==================================================
+# RUN SERVER
+# ==================================================
+
+if __name__ == "__main__":
+
+    app.run(
+        host="0.0.0.0",
+        port=int(
+            os.environ.get(
+                "PORT",
+                5000
+            )
+        ),
+        debug=False
+    )
