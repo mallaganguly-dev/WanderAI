@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "wanderai",
+  "main": "src/worker.py",
+  "compatibility_date": "2026-11-16",
+  "compatibility_flags": ["python_workers"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wanderai-db",
+      "database_id": "d3a7745a-daca-4220-8b40-8be97285db9c"
+    }
+  ]
+}
