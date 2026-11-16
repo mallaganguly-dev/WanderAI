@@ -44,11 +44,7 @@ def serve_static(filename):
     return Response(
         body,
         status=response.status,
-        headers={
-            key: value
-            for key, value in response.headers.items()
-            if key.lower() not in ("content-length", "transfer-encoding")
-        },
+        headers=response.headers,
     )
 
 
