@@ -13,10 +13,10 @@ load_dotenv()
 
 app = Flask(__name__)
 
-app.config["SECRET_KEY"] = os.getenv(
-    "SECRET_KEY",
-    "wanderai-dev-secret-key"
-)
+secret_key = os.getenv("SECRET_KEY")
+if not secret_key:
+    raise RuntimeError("SECRET_KEY must be configured before starting WanderAI.")
+app.config["SECRET_KEY"] = secret_key
 
 app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 8
 
