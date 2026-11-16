@@ -1,0 +1,1013 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>WanderAI | Smart Travel Planner</title>
+
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap">
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <!-- ================= NAVBAR ================= -->
+
+    <header class="navbar">
+
+        <div class="nav-container">
+
+            <a href="/" class="logo">
+                <span class="logo-icon">✈</span>
+                <span>Wander<span>AI</span></span>
+            </a>
+
+            <nav class="nav-links">
+
+                <a href="/" class="nav-link">
+                    Home
+                </a>
+
+                <a href="/#planner" class="nav-link">
+                    Plan Trip
+                </a>
+
+                <a href="/history" class="nav-link">
+                    Trip History
+                </a>
+
+                <a href="/#destinations" class="nav-link">
+                    Destinations
+                </a>
+
+                <a href="/#experiences" class="nav-link">
+                    Experiences
+                </a>
+
+                <a href="/#about" class="nav-link">
+                    About
+                </a>
+                <a href="/chatbot">🤖 AI Chat</a>
+
+                <a href="/admin/login" class="nav-link">
+                    Admin
+                </a>
+
+            </nav>
+
+            <!-- ================= RIGHT SIDE ================= -->
+
+            <div class="nav-auth">
+
+                <a href="#planner" class="nav-button">
+                    Plan My Trip
+                </a>
+
+                <!-- LOGGED OUT -->
+
+                <div id="loggedOutButtons" class="auth-buttons">
+
+                    <a href="/login" class="login-button">
+                        Login
+                    </a>
+
+                    <a href="/signup" class="signup-button">
+                        Sign Up
+                    </a>
+
+                </div>
+
+
+                <!-- LOGGED IN -->
+
+                <div id="profileArea"
+                     class="profile-area"
+                     style="display: none;">
+
+                    <!-- Profile photo button -->
+
+                    <button type="button"
+                            class="profile-button"
+                            onclick="toggleProfileMenu()">
+
+                        <img id="profileImage"
+                             class="profile-image"
+                             src=""
+                             alt="Profile">
+
+                    </button>
+
+
+                    <!-- Profile dropdown -->
+
+                    <div id="profileMenu"
+                         class="profile-menu">
+
+                        <div class="profile-info">
+
+                            <img id="menuProfileImage"
+                                 class="menu-profile-image"
+                                 src=""
+                                 alt="Profile">
+
+                            <div>
+
+                                <strong id="profileName">
+                                    User
+                                </strong>
+
+                                <span id="profileEmail">
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="profile-divider"></div>
+
+
+                        <button type="button"
+                                class="profile-menu-item"
+                                onclick="logoutUser()">
+
+                            🚪 Sign Out
+
+                        </button>
+
+
+                        <button type="button"
+                                class="profile-menu-item"
+                                onclick="loginAnotherAccount()">
+
+                            👤 Login with another account
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- MOBILE MENU -->
+
+            <button class="menu-button"
+                    onclick="toggleMenu()"
+                    aria-label="Open menu">
+
+                ☰
+
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <!-- ================= HERO ================= -->
+
+    <section class="hero">
+
+        <div class="hero-overlay"></div>
+
+        <div class="hero-content">
+
+            <p class="hero-label">
+                ✦ AI-POWERED TRAVEL PLANNING
+            </p>
+
+            <h1>
+                Your journey,
+                <span>intelligently planned.</span>
+            </h1>
+
+            <p class="hero-description">
+                WanderAI creates personalized travel itineraries,
+                discovers hidden gems, manages your budget,
+                and helps you explore the world smarter.
+            </p>
+
+            <a href="#planner"
+               class="hero-button">
+
+                Start Planning
+                <span>→</span>
+
+            </a>
+
+        </div>
+
+    </section>
+
+
+    <!-- ================= PLANNER ================= -->
+
+    <section id="planner"
+             class="planner-section">
+
+        <div class="section-container">
+
+            <div class="section-heading">
+
+                <p class="section-label">
+                    ✦ PLAN YOUR JOURNEY
+                </p>
+
+                <h2>
+                    Where will you go?
+                </h2>
+
+                <p>
+                    Tell us what you want and our AI will create
+                    a personalized travel experience for you.
+                </p>
+
+            </div>
+
+
+            <form action="/plan"
+                  method="POST"
+                  id="travelForm"
+                  class="planner-form">
+
+
+                <!-- Destination -->
+
+                <div class="form-group">
+
+                    <label for="destination">
+                        Destination
+                    </label>
+
+                    <input
+                        type="text"
+                        id="destination"
+                        name="destination"
+                        placeholder="e.g. Tokyo, Japan"
+                        required>
+
+                </div>
+
+<!-- From Location -->
+
+<div class="form-group">
+
+    <label for="from_location">
+        From
+    </label>
+
+    <input
+        type="text"
+        id="from_location"
+        name="from_location"
+        placeholder="e.g. Visakhapatnam"
+        required>
+
+</div>
+
+                <!-- Days -->
+
+                <div class="form-group">
+
+                    <label for="days">
+                        Number of Days
+                    </label>
+
+                    <input
+                        type="number"
+                        id="days"
+                        name="days"
+                        min="1"
+                        max="30"
+                        value="5"
+                        required>
+
+                </div>
+
+
+                <!-- Budget -->
+
+                <div class="form-group">
+
+                    <label for="budget">
+                        Budget
+                    </label>
+
+                    <input
+                        type="number"
+                        id="budget"
+                        name="budget"
+                        min="0"
+                        step="0.01"
+                        value="2000"
+                        required>
+
+                </div>
+
+
+                <!-- Budget Currency -->
+
+                <div class="form-group">
+
+                    <label for="budget_currency">
+                        Budget Currency
+                    </label>
+
+                    <select
+                        id="budget_currency"
+                        name="budget_currency"
+                        required>
+
+                        <option value="USD" selected>
+                            $ USD - US Dollar
+                        </option>
+
+                        {% for code, data in currencies.items() %}
+                        {% if code != 'USD' %}
+                        <option value="{{ code }}">
+                            {{ data[0] }} {{ code }} - {{ data[1] }}
+                        </option>
+                        {% endif %}
+                        {% endfor %}
+
+                    </select>
+
+                    <small class="form-hint">
+                        Pick any currency. Costs are
+                        planned in the currency you select.
+                    </small>
+
+                </div>
+
+
+                <!-- Travel Style -->
+
+                <div class="form-group">
+
+                    <label for="travel_style">
+                        Travel Style
+                    </label>
+
+                    <select
+                        id="travel_style"
+                        name="travel_style"
+                        required>
+
+                        <option value="Balanced" selected>
+                            ⚖️ Balanced
+                        </option>
+
+                        <option value="Budget">
+                            💰 Budget
+                        </option>
+
+                        <option value="Luxury">
+                            💎 Luxury
+                        </option>
+
+                        <option value="Adventure">
+                            🏔️ Adventure
+                        </option>
+
+                        <option value="Family">
+                            👨‍👩‍👧‍👦 Family
+                        </option>
+
+                        <option value="Romantic">
+                            ❤️ Romantic
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- Interests -->
+
+                <div class="form-group form-full">
+
+                    <label for="interests">
+                        Interests
+                    </label>
+
+                    <input
+                        type="text"
+                        id="interests"
+                        name="interests"
+                        value="food, culture, history"
+                        placeholder="e.g. food, beaches, shopping, history">
+
+                </div>
+
+
+                <!-- Submit -->
+
+                <div class="planner-submit">
+
+                    <button
+                        type="submit"
+                        id="plannerButton"
+                        class="planner-button">
+
+                        <span id="buttonText">
+                            ✨ Create My Itinerary
+                        </span>
+
+                    </button>
+
+                    <p id="loadingMessage"
+                       class="loading-message"
+                       style="display: none;">
+
+                        🤖 AI is creating your travel plan...
+
+                    </p>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </section>
+
+
+    <!-- ================= DESTINATIONS ================= -->
+
+    <section id="destinations"
+             class="destinations-section">
+
+        <div class="section-container">
+
+            <div class="section-heading">
+
+                <p class="section-label">
+                    ✦ INSPIRATION
+                </p>
+
+                <h2>
+                    Explore the world
+                </h2>
+
+                <p>
+                    Discover destinations that turn ordinary trips
+                    into unforgettable memories.
+                </p>
+
+            </div>
+
+
+            <div class="destination-grid">
+
+
+                <div class="destination-card">
+
+                    <img src="{{ url_for('static', filename='images/bali.jpg') }}"
+                         alt="Bali">
+
+                    <div class="destination-overlay">
+
+                        <span>
+                            Indonesia
+                        </span>
+
+                        <h3>
+                            Bali
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div class="destination-card">
+
+                    <img src="{{ url_for('static', filename='images/paris.jpg') }}"
+                         alt="Paris">
+
+                    <div class="destination-overlay">
+
+                        <span>
+                            France
+                        </span>
+
+                        <h3>
+                            Paris
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div class="destination-card">
+
+                    <img src="{{ url_for('static', filename='images/dubai.jpg') }}"
+                         alt="Dubai">
+
+                    <div class="destination-overlay">
+
+                        <span>
+                            UAE
+                        </span>
+
+                        <h3>
+                            Dubai
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div class="destination-card">
+
+                    <img src="{{ url_for('static', filename='images/japan.jpg') }}"
+                         alt="Japan">
+
+                    <div class="destination-overlay">
+
+                        <span>
+                            Japan
+                        </span>
+
+                        <h3>
+                            Japan
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div class="destination-card">
+
+                    <img src="{{ url_for('static', filename='images/switzerland.jpg') }}"
+                         alt="Switzerland">
+
+                    <div class="destination-overlay">
+
+                        <span>
+                            Switzerland
+                        </span>
+
+                        <h3>
+                            Switzerland
+                        </h3>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ================= EXPERIENCES ================= -->
+
+    <section id="experiences"
+             class="experiences-section">
+
+        <div class="section-container">
+
+            <div class="section-heading">
+
+                <p class="section-label">
+                    ✦ TRAVEL BETTER
+                </p>
+
+                <h2>
+                    Everything you need
+                </h2>
+
+                <p>
+                    WanderAI brings intelligent travel planning
+                    into one simple experience.
+                </p>
+
+            </div>
+
+
+            <div class="experience-grid">
+
+
+                <div class="experience-card">
+
+                    <div class="experience-icon">
+                        🧠
+                    </div>
+
+                    <h3>
+                        AI Itineraries
+                    </h3>
+
+                    <p>
+                        Get a personalized day-by-day itinerary
+                        based on your interests, budget and travel style.
+                    </p>
+
+                </div>
+
+
+                <div class="experience-card">
+
+                    <div class="experience-icon">
+                        💰
+                    </div>
+
+                    <h3>
+                        Smart Budgeting
+                    </h3>
+
+                    <p>
+                        Plan your expenses and keep your trip
+                        within your selected budget.
+                    </p>
+
+                </div>
+
+
+                <div class="experience-card">
+
+                    <div class="experience-icon">
+                        📍
+                    </div>
+
+                    <h3>
+                        Discover Places
+                    </h3>
+
+                    <p>
+                        Find restaurants, hotels, attractions
+                        and interesting places around your destination.
+                    </p>
+
+                </div>
+
+
+                <div class="experience-card">
+
+                    <div class="experience-icon">
+                        ☀️
+                    </div>
+
+                    <h3>
+                        Weather Information
+                    </h3>
+
+                    <p>
+                        Check upcoming weather information
+                        before planning your activities.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ================= WHY WANDERAI ================= -->
+
+    <section id="about"
+             class="why-section">
+
+        <div class="section-container">
+
+            <div class="why-content">
+
+                <div class="why-text">
+
+                    <p class="section-label">
+                        ✦ WHY WANDERAI
+                    </p>
+
+                    <h2>
+                        Travel planning,
+                        <span>without the stress.</span>
+                    </h2>
+
+                    <p>
+                        Instead of spending hours searching through
+                        dozens of websites, let WanderAI organize
+                        your trip in seconds.
+                    </p>
+
+
+                    <div class="why-points">
+
+                        <div class="why-point">
+
+                            <span>✓</span>
+
+                            <div>
+                                <strong>
+                                    Personalized
+                                </strong>
+
+                                <p>
+                                    Plans designed around your interests.
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="why-point">
+
+                            <span>✓</span>
+
+                            <div>
+                                <strong>
+                                    Budget Friendly
+                                </strong>
+
+                                <p>
+                                    Recommendations matched to your budget.
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="why-point">
+
+                            <span>✓</span>
+
+                            <div>
+                                <strong>
+                                    Easy to Use
+                                </strong>
+
+                                <p>
+                                    Enter your preferences and let AI do the work.
+                                </p>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="why-image">
+
+                    <img src="{{ url_for('static', filename='images/travel.jpg') }}"
+                         alt="Travel">
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ================= TESTIMONIAL ================= -->
+
+    <section class="testimonial-section">
+
+        <div class="section-container">
+
+            <div class="testimonial-card">
+
+                <div class="quote-mark">
+                    “
+                </div>
+
+                <p class="testimonial-text">
+                    WanderAI made planning our trip incredibly easy.
+                    We had a complete itinerary ready in minutes.
+                </p>
+
+                <div class="testimonial-author">
+
+                    <div class="author-avatar">
+                        👤
+                    </div>
+
+                    <div>
+
+                        <strong>
+                            Happy Traveler
+                        </strong>
+
+                        <span>
+                            WanderAI User
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ================= CTA ================= -->
+
+    <section class="cta-section">
+
+        <div class="cta-overlay"></div>
+
+        <div class="cta-content">
+
+            <p class="section-label">
+                ✦ YOUR NEXT ADVENTURE
+            </p>
+
+            <h2>
+                Ready to explore?
+            </h2>
+
+            <p>
+                Let WanderAI create your perfect trip.
+            </p>
+
+            <a href="#planner"
+               class="cta-button">
+
+                Plan My Trip
+                <span>→</span>
+
+            </a>
+
+        </div>
+
+    </section>
+
+
+    <!-- ================= FOOTER ================= -->
+
+    <footer class="footer">
+
+        <div class="footer-container">
+
+
+            <div class="footer-brand">
+
+                <a href="/" class="logo">
+
+                    <span class="logo-icon">
+                        ✈
+                    </span>
+
+                    <span>
+                        Wander<span>AI</span>
+                    </span>
+
+                </a>
+
+                <p>
+                    Your intelligent companion for unforgettable journeys.
+                </p>
+
+            </div>
+
+
+            <div class="footer-links">
+
+                <div>
+
+                    <h4>
+                        Explore
+                    </h4>
+
+                    <a href="/">
+                        Home
+                    </a>
+
+                    <a href="#planner">
+                        Plan Trip
+                    </a>
+
+                    <a href="/history">
+                        Trip History
+                    </a>
+
+                </div>
+
+
+                <div>
+
+                    <h4>
+                        Discover
+                    </h4>
+
+                    <a href="#destinations">
+                        Destinations
+                    </a>
+
+                    <a href="#experiences">
+                        Experiences
+                    </a>
+
+                    <a href="#about">
+                        About
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="footer-bottom">
+
+            <p>
+                © 2026 WanderAI. All rights reserved.
+            </p>
+
+        </div>
+
+    </footer>
+
+
+    <!-- ================= JAVASCRIPT ================= -->
+
+    <script>
+
+        function toggleMenu() {
+
+            const navLinks =
+                document.querySelector(".nav-links");
+
+            if (navLinks) {
+
+                navLinks.classList.toggle("active");
+
+            }
+
+        }
+
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const travelForm =
+                document.getElementById("travelForm");
+
+            const plannerButton =
+                document.getElementById("plannerButton");
+
+            const buttonText =
+                document.getElementById("buttonText");
+
+            const loadingMessage =
+                document.getElementById("loadingMessage");
+
+
+            if (travelForm) {
+
+                travelForm.addEventListener("submit", function () {
+
+                    if (plannerButton) {
+                        plannerButton.disabled = true;
+                    }
+
+                    if (buttonText) {
+                        buttonText.textContent =
+                            "🤖 Creating your itinerary...";
+                    }
+
+                    if (loadingMessage) {
+                        loadingMessage.style.display = "block";
+                    }
+
+                });
+
+            }
+
+        });
+
+    </script>
+
+
+    <!-- Firebase Authentication -->
+
+    <script type="module"
+            src="{{ url_for('static', filename='js/auth.js') }}">
+    </script>
+
+
+</body>
+
+</html>

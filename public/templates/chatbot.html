@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>WanderAI Chatbot</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+        }
+
+        .chat-container {
+            max-width: 700px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: #111827;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-header h2 {
+            margin: 0;
+        }
+
+        .messages {
+            height: 450px;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 12px;
+            max-width: 80%;
+            line-height: 1.5;
+        }
+
+        .user {
+            background: #2563eb;
+            color: white;
+            margin-left: auto;
+        }
+
+        .bot {
+            background: #eef2f7;
+            color: #111827;
+        }
+
+        .input-area {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            gap: 10px;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 13px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .input-area button {
+            padding: 13px 20px;
+            border: none;
+            border-radius: 10px;
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="chat-container">
+
+    <div class="chat-header">
+        <h2>✈️ WanderAI</h2>
+        <p>Your AI Travel Assistant</p>
+    </div>
+
+    <div class="messages" id="messages">
+
+        <div class="message bot">
+            👋 Hi! I'm WanderAI. How can I help you plan your trip?
+        </div>
+
+    </div>
+
+    <div class="input-area">
+
+        <input
+            type="text"
+            id="messageInput"
+            placeholder="Ask about your trip..."
+            onkeydown="handleEnter(event)"
+        >
+
+        <button onclick="sendMessage()">
+            Send
+        </button>
+
+    </div>
+
+</div>
+
+<script>
+
+async function sendMessage() {
+
+    const input = document.getElementById("messageInput");
+
+    const message = input.value.trim();
+
+    if (!message) {
+        return;
+    }
+
+    addMessage(message, "user");
+
+    input.value = "";
+
+    addMessage("Thinking...", "bot");
+
+    try {
+
+        const response = await fetch("/chat", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                message: message
+            })
+
+        });
+
+        const data = await response.json();
+
+        const messages =
+            document.getElementById("messages");
+
+        messages.lastElementChild.remove();
+
+        addMessage(data.reply, "bot");
+
+    } catch (error) {
+
+        const messages =
+            document.getElementById("messages");
+
+        messages.lastElementChild.remove();
+
+        addMessage(
+            "Sorry, something went wrong.",
+            "bot"
+        );
+    }
+}
+
+
+function addMessage(text, type) {
+
+    const messages =
+        document.getElementById("messages");
+
+    const message =
+        document.createElement("div");
+
+    message.className =
+        "message " + type;
+
+    message.textContent = text;
+
+    messages.appendChild(message);
+
+    messages.scrollTop =
+        messages.scrollHeight;
+}
+
+
+function handleEnter(event) {
+
+    if (event.key === "Enter") {
+
+        sendMessage();
+
+    }
+
+}
+
+</script>
+
+</body>
+
+</html>

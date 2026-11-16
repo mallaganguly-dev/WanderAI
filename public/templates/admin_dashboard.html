@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard | WanderAI</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f5f7fb;
+            font-family: "DM Sans", -apple-system,
+                         BlinkMacSystemFont, "Segoe UI",
+                         sans-serif;
+            color: #1f2937;
+        }
+
+        .admin-topbar {
+            background: #111827;
+            color: white;
+            padding: 18px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .admin-topbar h1 {
+            font-size: 20px;
+            margin: 0;
+        }
+
+        .admin-topbar h1 span {
+            color: #667eea;
+        }
+
+        .admin-topbar-meta {
+            font-size: 13px;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+
+        .admin-topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .admin-chip {
+            background: #1f2937;
+            border: 1px solid #374151;
+            color: #e5e7eb;
+            font-size: 13px;
+            padding: 8px 14px;
+            border-radius: 999px;
+        }
+
+        .admin-link-button {
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 9px 16px;
+            border-radius: 999px;
+        }
+
+        .admin-link-button.dark {
+            background: #374151;
+        }
+
+        .admin-wrap {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 20px 60px;
+        }
+
+        .admin-flash {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 22px;
+            font-size: 14px;
+        }
+
+        .admin-flash.error {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #b91c1c;
+        }
+
+        .admin-section {
+            background: white;
+            border-radius: 16px;
+            padding: 26px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+            margin-bottom: 26px;
+        }
+
+        .admin-section h2 {
+            margin: 0 0 18px;
+            font-size: 18px;
+        }
+
+        .admin-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .admin-stat {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 20px;
+        }
+
+        .admin-stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #6b7280;
+        }
+
+        .admin-stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+
+        .admin-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .admin-bar-label {
+            width: 180px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .admin-bar-track {
+            flex: 1;
+            background: #e5e7eb;
+            border-radius: 999px;
+            height: 10px;
+            overflow: hidden;
+        }
+
+        .admin-bar-fill {
+            height: 100%;
+            background: #667eea;
+            border-radius: 999px;
+        }
+
+        .admin-bar-count {
+            width: 40px;
+            text-align: right;
+            color: #6b7280;
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .admin-table th,
+        .admin-table td {
+            text-align: left;
+            padding: 12px 10px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: middle;
+        }
+
+        .admin-table th {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6b7280;
+        }
+
+        .admin-table-scroll {
+            overflow-x: auto;
+        }
+
+        .admin-badge-full {
+            background: #ecfdf5;
+            color: #047857;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 999px;
+        }
+
+        .admin-badge-limited {
+            background: #fff7ed;
+            color: #c2410c;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 999px;
+        }
+
+        .admin-btn {
+            background: #111827;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .admin-btn.soft {
+            background: #eef2ff;
+            color: #4338ca;
+        }
+
+        .admin-btn.danger {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .admin-view-link {
+            color: #4338ca;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .admin-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 12px;
+            align-items: end;
+        }
+
+        .admin-field label {
+            display: block;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6b7280;
+            margin-bottom: 6px;
+        }
+
+        .admin-field input {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .admin-field input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .admin-inline-form {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .admin-empty {
+            color: #6b7280;
+            font-size: 14px;
+            padding: 14px 0;
+        }
+
+        .admin-danger-zone {
+            border: 1px solid #fecaca;
+            background: #fff7f7;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<!-- ================= TOP BAR ================= -->
+
+<div class="admin-topbar">
+
+    <div>
+
+        <h1>
+            Wander<span>AI</span> Admin
+        </h1>
+
+        <div class="admin-topbar-meta">
+            Signed in as {{ admin.email }}
+        </div>
+
+    </div>
+
+    <div class="admin-topbar-actions">
+
+        <span class="admin-chip">
+            {% if admin.is_main_admin %}
+            Main Admin
+            {% elif admin.full_access %}
+            Full Access
+            {% else %}
+            Limited Access
+            {% endif %}
+        </span>
+
+        <a href="/"
+           class="admin-link-button dark">
+            View Site
+        </a>
+
+        <a href="{{ url_for('admin.admin_logout') }}"
+           class="admin-link-button">
+            Sign Out
+        </a>
+
+    </div>
+
+</div>
+
+<div class="admin-wrap">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="admin-flash {{ 'error' if category == 'error' }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endwith %}
+
+    <!-- ================= OVERVIEW ================= -->
+
+    <div class="admin-section">
+
+        <h2>Overview</h2>
+
+        <div class="admin-stat-grid">
+
+            <div class="admin-stat">
+                <div class="admin-stat-label">
+                    Total Trips
+                </div>
+                <div class="admin-stat-value">
+                    {{ stats.total_trips }}
+                </div>
+            </div>
+
+            <div class="admin-stat">
+                <div class="admin-stat-label">
+                    Destinations
+                </div>
+                <div class="admin-stat-value">
+                    {{ stats.total_destinations }}
+                </div>
+            </div>
+
+            <div class="admin-stat">
+                <div class="admin-stat-label">
+                    Planned Budget
+                </div>
+                <div class="admin-stat-value">
+                    ${{ stats.total_budget }}
+                </div>
+            </div>
+
+            <div class="admin-stat">
+                <div class="admin-stat-label">
+                    Admins
+                </div>
+                <div class="admin-stat-value">
+                    {{ admins | length }}
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ================= BREAKDOWN ================= -->
+
+    <div class="admin-section">
+
+        <h2>Top Destinations</h2>
+
+        {% if stats.top_destinations %}
+            {% set max_count = stats.top_destinations[0].trip_count %}
+            {% for row in stats.top_destinations %}
+            <div class="admin-bar-row">
+                <div class="admin-bar-label">
+                    {{ row.destination }}
+                </div>
+                <div class="admin-bar-track">
+                    <div class="admin-bar-fill"
+                         style="width: {{ (row.trip_count / max_count * 100) | round(0) }}%">
+                    </div>
+                </div>
+                <div class="admin-bar-count">
+                    {{ row.trip_count }}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="admin-empty">
+                No trips planned yet.
+            </div>
+        {% endif %}
+
+        <h2 style="margin-top: 26px;">
+            Travel Styles
+        </h2>
+
+        {% if stats.travel_styles %}
+            {% set max_style = stats.travel_styles[0].style_count %}
+            {% for row in stats.travel_styles %}
+            <div class="admin-bar-row">
+                <div class="admin-bar-label">
+                    {{ row.travel_style }}
+                </div>
+                <div class="admin-bar-track">
+                    <div class="admin-bar-fill"
+                         style="width: {{ (row.style_count / max_style * 100) | round(0) }}%">
+                    </div>
+                </div>
+                <div class="admin-bar-count">
+                    {{ row.style_count }}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="admin-empty">
+                No travel styles recorded yet.
+            </div>
+        {% endif %}
+
+    </div>
+
+    <!-- ================= ALL TRIPS ================= -->
+
+    <div class="admin-section">
+
+        <h2>All Trips</h2>
+
+        <div class="admin-table-scroll">
+
+            <table class="admin-table">
+
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Destination</th>
+                        <th>Days</th>
+                        <th>Budget</th>
+                        <th>Style</th>
+                        <th>Interests</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for trip in trips %}
+                    <tr>
+                        <td>#{{ trip.id }}</td>
+                        <td>{{ trip.destination }}</td>
+                        <td>{{ trip.days }}</td>
+                        <td>${{ trip.budget }}</td>
+                        <td>{{ trip.travel_style }}</td>
+                        <td>{{ trip.interests }}</td>
+                        <td>{{ trip.created_at }}</td>
+                        <td>
+                            <div class="admin-inline-form">
+
+                                <a class="admin-view-link"
+                                   href="{{ url_for('admin.admin_view_trip', trip_id=trip.id) }}">
+                                    View
+                                </a>
+
+                                <form method="POST"
+                                      action="{{ url_for('admin.admin_delete_trip', trip_id=trip.id) }}"
+                                      onsubmit="return confirm('Delete this trip?');">
+                                    <button type="submit"
+                                            class="admin-btn danger">
+                                        Delete
+                                    </button>
+                                </form>
+
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8">
+                            <div class="admin-empty">
+                                No trips found.
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    <!-- ================= ADMIN ACCOUNTS ================= -->
+
+    <div class="admin-section">
+
+        <h2>Admin Accounts</h2>
+
+        {% if not admin.is_main_admin %}
+        <div class="admin-flash">
+            You can view the admin list, but only the
+            main admin can add admins or grant access.
+        </div>
+        {% endif %}
+
+        <div class="admin-table-scroll">
+
+            <table class="admin-table">
+
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Email</th>
+                        <th>Authorization</th>
+                        <th>Created</th>
+                        <th>Last Login</th>
+                        {% if admin.is_main_admin %}
+                        <th>Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for row in admins %}
+                    <tr>
+                        <td>#{{ row.id }}</td>
+                        <td>{{ row.email }}</td>
+                        <td>
+                            {% if row.is_main_admin %}
+                            <span class="admin-badge-full">
+                                Main Admin
+                            </span>
+                            {% elif row.full_access %}
+                            <span class="admin-badge-full">
+                                Full Access
+                            </span>
+                            {% else %}
+                            <span class="admin-badge-limited">
+                                Limited
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ row.created_at }}</td>
+                        <td>{{ row.last_login or "Never" }}</td>
+
+                        {% if admin.is_main_admin %}
+                        <td>
+
+                            <div class="admin-inline-form">
+
+                                <form method="POST"
+                                      action="{{ url_for('admin.admin_toggle_access', admin_id=row.id) }}">
+                                    <button type="submit"
+                                            class="admin-btn soft">
+                                        {% if row.is_main_admin %}
+                                        Main Admin
+                                        {% elif row.full_access %}
+                                        Revoke Full Access
+                                        {% else %}
+                                        Grant Full Access
+                                        {% endif %}
+                                    </button>
+                                </form>
+
+                                <form method="POST"
+                                      action="{{ url_for('admin.admin_change_password', admin_id=row.id) }}">
+                                    <input type="password"
+                                           name="new_password"
+                                           placeholder="New password"
+                                           required
+                                           style="padding: 8px 10px;
+                                                  border: 1px solid #d1d5db;
+                                                  border-radius: 8px;
+                                                  font-size: 13px;">
+                                    <button type="submit"
+                                            class="admin-btn soft">
+                                        Set Password
+                                    </button>
+                                </form>
+
+                                {% if row.id != admin.id %}
+                                <form method="POST"
+                                      action="{{ url_for('admin.admin_delete_admin', admin_id=row.id) }}"
+                                      onsubmit="return confirm('Delete this admin account?');">
+                                    <button type="submit"
+                                            class="admin-btn danger">
+                                        Delete
+                                    </button>
+                                </form>
+                                {% endif %}
+
+                            </div>
+
+                        </td>
+                        {% endif %}
+
+                    </tr>
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    <!-- ================= CHANGE OWN PASSWORD ================= -->
+
+    <div class="admin-section">
+
+        <h2>Change My Password</h2>
+
+        <form method="POST"
+              action="{{ url_for('admin.admin_change_own_password') }}">
+
+            <div class="admin-form-grid">
+
+                <div class="admin-field">
+                    <label>Current Password</label>
+                    <input type="password"
+                           name="current_password"
+                           required>
+                </div>
+
+                <div class="admin-field">
+                    <label>New Password</label>
+                    <input type="password"
+                           name="new_password"
+                           required>
+                </div>
+
+                <div class="admin-field">
+                    <label>Confirm Password</label>
+                    <input type="password"
+                           name="confirm_password"
+                           required>
+                </div>
+
+                <div class="admin-field">
+                    <button type="submit"
+                            class="admin-btn">
+                        Update Password
+                    </button>
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+
+    <!-- ================= ADD ADMIN ================= -->
+
+    {% if admin.is_main_admin %}
+    <div class="admin-section">
+
+        <h2>Add New Admin</h2>
+
+        <p class="admin-subtitle">
+            New admins can manage trips but cannot
+            create admins or grant access.
+        </p>
+
+        <form method="POST"
+              action="{{ url_for('admin.admin_add_admin') }}">
+
+            <div class="admin-form-grid">
+
+                <div class="admin-field">
+                    <label>Email</label>
+                    <input type="email"
+                           name="email"
+                           placeholder="admin@wanderai.com"
+                           required>
+                </div>
+
+                <div class="admin-field">
+                    <label>Password</label>
+                    <input type="password"
+                           name="password"
+                           placeholder="Minimum 6 characters"
+                           required>
+                </div>
+
+                <div class="admin-field">
+                    <button type="submit"
+                            class="admin-btn">
+                        Create Admin
+                    </button>
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+    {% endif %}
+
+    <!-- ================= DANGER ZONE ================= -->
+
+    <div class="admin-section admin-danger-zone">
+
+        <h2>Danger Zone</h2>
+
+        <form method="POST"
+              action="{{ url_for('admin.admin_delete_all_trips') }}"
+              onsubmit="return confirm('Delete ALL saved trips? This cannot be undone.');">
+
+            <button type="submit"
+                    class="admin-btn danger">
+                Delete All Trips
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>
