@@ -1,3 +1,6 @@
+import os
+os.environ["CLOUDFLARE_WORKERS"] = "1"
+
 from flask import Response, request
 from jinja2 import BaseLoader, TemplateNotFound
 from pyodide.ffi import run_sync
