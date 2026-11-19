@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: wanderai
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn web:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
+    healthCheckPath: /
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: MAIN_ADMIN_EMAIL
+        sync: false
+      - key: MAIN_ADMIN_PASSWORD
+        sync: false
