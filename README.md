@@ -1,37 +1,33 @@
-# Travel Planner Agent
+# WanderAI — AI Travel Planner
 
-Three-agent CrewAI system that creates personalized travel itineraries with destination research, day-by-day plans, and budget breakdown.
+WanderAI is a Flask web app that creates AI-generated travel itineraries using the Google Gemini API. It includes trip planning, weather information, currency conversion, Google Maps links, trip history, sign-up/login, and an admin panel.
 
-**Framework**: CrewAI  
-**LLM**: GPT-4o-mini  
+## Technologies
+- Python 3.12
+- Flask (backend)
+- HTML, CSS, JavaScript (frontend)
+- SQLite (local/demo data storage)
+- Google Gemini API (AI itinerary generation)
+- Gunicorn (production web server)
 
-## Setup
+## Run locally
+1. Install Python 3.12.
+2. Install web dependencies: `pip install -r requirements.txt`
+3. Copy `.env.example` to `.env` and fill in your Gemini API key, secret key, and admin credentials.
+4. Start: `python web.py`
+5. Visit http://127.0.0.1:5000.
 
-```bash
-pip install -r requirements.txt
-cp .env.example .env
-```
+## Deploy free with Render
+1. Sign in to Render and choose **New → Blueprint**.
+2. Connect GitHub and select this repository.
+3. Render reads `render.yaml` and creates the free web service.
+4. Enter `GEMINI_API_KEY`, `MAIN_ADMIN_EMAIL`, and `MAIN_ADMIN_PASSWORD` when prompted. A `SECRET_KEY` is generated automatically.
+5. Deploy. Render provides an HTTPS `onrender.com` URL.
 
-## Run
+**Free-plan notes:** the service may sleep when inactive. Free web services have ephemeral filesystems, so SQLite trip history and admin data may be lost after restarts/redeploys. This is suitable for a demo, not permanent storage.
 
-```bash
-python agent.py --destination "Tokyo, Japan" --days 7 --budget 3000
-python agent.py --destination "Paris, France" --days 5 --budget 5000 --interests "art, wine, architecture"
+## Standalone CrewAI agent (optional)
+The web app does not need CrewAI installed. To run the CLI agent, install `pip install -r requirements-agent.txt`.
 
-## Web UI (Flask)
-
-A lightweight Flask UI is included at `web.py`. It uses an Ollama model (`gpt-oss:120b-cloud`) to generate itineraries.
-
-Prerequisites:
-- Run Ollama and load the `gpt-oss:120b-cloud` model locally. See https://ollama.com/docs
-
-Run locally:
-
-```bash
-pip install -r requirements.txt
-export OLLAMA_URL="http://localhost:11434/api/generate"  # optional
-python web.py
-```
-
-Then open http://localhost:5000 in your browser.
-```
+## Security
+Do not commit `.env`, API keys, passwords, or SQLite databases. Use host environment variables for secrets.
