@@ -39,15 +39,9 @@ except Exception:
 DATABASE = "wanderai.db"
 
 
-MAIN_ADMIN_EMAIL = os.getenv(
-    "MAIN_ADMIN_EMAIL",
-    "hari@gmail.com"
-)
+MAIN_ADMIN_EMAIL = os.getenv("MAIN_ADMIN_EMAIL", "").strip()
 
-MAIN_ADMIN_PASSWORD = os.getenv(
-    "MAIN_ADMIN_PASSWORD",
-    "hari@1234"
-)
+MAIN_ADMIN_PASSWORD = os.getenv("MAIN_ADMIN_PASSWORD", "")
 
 
 admin_bp = Blueprint(
@@ -351,6 +345,11 @@ def delete_admin(admin_id):
 def ensure_main_admin():
 
     init_admin_database()
+
+    # Never create an administrator using hard-coded credentials.
+    if not MAIN_ADMIN_EMAIL or not MAIN_ADMIN_PASSWORD:
+        print("Main admin not configured; set MAIN_ADMIN_EMAIL and MAIN_ADMIN_PASSWORD.")
+        return
 
     if count_main_admins() > 0:
         return
